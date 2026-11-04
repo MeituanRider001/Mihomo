@@ -41,14 +41,14 @@ const serviceConfigs = [
 ];
 
 /**
- * 自定义配置选项（Bettbox GUI 动态注入）
+ * 自定义配置选项
  */
 var ruleOptionsEnable = {
   // 基础策略组开关
-  'Manual': true,      // 核心聚合策略组
-  'SelectGroup': true, // 手动选择所有单节点
-  'AutoGroup': true,   // 自动优选所有单节点
-  'LoadBalance': true, // 负载均衡所有单节点
+  'Manual': true,
+  'SelectGroup': true,
+  'AutoGroup': true,
+  'LoadBalance': true,
 
   // 分流服务策略配置
   FCM: true,
@@ -74,6 +74,7 @@ var ruleOptionsEnable = {
 
   // 功能增强开关
   自动补国旗: true,
+  处理私有DNS: true,
 
   // 其他设置
   极简模式: false,
@@ -90,9 +91,6 @@ var ruleOptionsEnable = {
   代理IPV6优先: false
 };
 
-/**
- * 策略组选项候选池
- */
 Compatible_With_Bettbox.policyGroupOptions = [
   'Manual', 'SelectGroup', 'AutoGroup', 'LoadBalance',
   'HK', 'SG', 'JP', 'US', 'TW', 'Other',
@@ -102,6 +100,56 @@ Compatible_With_Bettbox.policyGroupOptions = [
   'Speedtest', 'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
   'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
 ];
+
+// ==========================================
+// 1. 原版地区正则（含单词边界隔离）
+// ==========================================
+const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
+const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
+const usPattern = '(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)';
+const sgPattern = '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
+const twPattern = '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
+
+const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
+
+const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
+const globalExclude = `(?i)${globalPattern}`;
+const hkFilter = `(?i)${hkPattern}`;
+const jpFilter = `(?i)${jpPattern}`;
+const usFilter = `(?i)${usPattern}`;
+const sgFilter = `(?i)${sgPattern}`;
+const twFilter = `(?i)${twPattern}`;
+const otherExclude = `(?i)(${excludeMainlandPattern}|${globalPattern})`;
+
+const globalExcludeRegex = new RegExp(globalPattern, 'i');
+const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
+const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
+
+// ==========================================
+// 2. 自动补国旗（精准判定已有 Emoji，避免双国旗）
+// ==========================================
+const flagDetectionRegex = /(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD83C\uDFC1\uD83C\uDFF3\uD83C\uDFF4]|[\u2690\u2691]/;
+
+const flagMatchRules = [
+  { flag: '🇭🇰', reg: new RegExp(hkPattern, 'i') },
+  { flag: '🇯🇵', reg: new RegExp(jpPattern, 'i') },
+  { flag: '🇺🇸', reg: new RegExp(usPattern, 'i') },
+  { flag: '🇸🇬', reg: new RegExp(sgPattern, 'i') },
+  { flag: '🇹🇼', reg: new RegExp(twPattern, 'i') }
+];
+
+function autoAppendFlag(name) {
+  if (!name) return '';
+  if (flagDetectionRegex.test(name)) {
+    return name; // 原生已有国旗，不重复加
+  }
+  for (const item of flagMatchRules) {
+    if (item.reg.test(name)) {
+      return `${item.flag} ${name}`;
+    }
+  }
+  return name;
+}
 
 function main(config) {
   // 1. 全局运行参数与界面配置
@@ -134,112 +182,7 @@ function main(config) {
     asn: "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb"
   };
 
-  // 2. DNS 配置（私有 DNS 自动继承处理）
-  const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
-  const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
-  const defaultDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
-  
-  // 提取订阅原有的私有/自定义 DNS，避免破坏机场节点上线解析
-  const originalDns = config['dns'] || {};
-  let proxyServerDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
-  if (Array.isArray(originalDns['proxy-server-nameserver']) && originalDns['proxy-server-nameserver'].length > 0) {
-    proxyServerDNS = originalDns['proxy-server-nameserver'];
-  } else if (Array.isArray(config['nameservers']) && config['nameservers'].length > 0) {
-    proxyServerDNS = config['nameservers'];
-  } else if (Array.isArray(originalDns['nameserver']) && originalDns['nameserver'].length > 0) {
-    const rawPrivateDns = originalDns['nameserver'].filter(d => typeof d === 'string' && !d.includes('fake-ip'));
-    if (rawPrivateDns.length > 0) {
-      proxyServerDNS = rawPrivateDns;
-    }
-  }
-
-  const fakeIpFilters = ['geosite:private', 'geosite:cn'];
-  if (ruleOptionsEnable['FCM']) {
-    fakeIpFilters.push('geosite:googlefcm');
-  }
-
-  // 继承机场原有的 nameserver-policy（例如私有域名解析分流）
-  const originalPolicy = originalDns['nameserver-policy'] || {};
-  const mergedNameserverPolicy = Object.assign({}, originalPolicy, {
-    'geosite:private': 'system',
-    'geosite:category-entertainment-cn,douyin': ['system', '180.184.1.1', '180.184.2.2'],
-    'geosite:cn': chinaDNS
-  });
-
-  config['dns'] = {
-    enable: true,
-    ipv6: true,
-    'use-hosts': true,
-    'cache-algorithm': 'arc',
-    'use-system-hosts': true,
-    'enhanced-mode': 'fake-ip',
-    'fake-ip-range': '198.18.0.1/15',
-    'fake-ip-range6': '2001:2::1/48',
-    'fake-ip-filter': fakeIpFilters,
-    'default-nameserver': defaultDNS,
-    'proxy-server-nameserver': proxyServerDNS,
-    nameserver: foreignDNS,
-    'nameserver-policy': mergedNameserverPolicy,
-    'direct-nameserver': chinaDNS,
-    'direct-nameserver-follow-policy': true
-  };
-
-  // 3. Hosts 与 NTP 配置（无损合并机场原始节点 hosts 映射）
-  const originalHosts = config['hosts'] || {};
-  config['hosts'] = Object.assign({}, originalHosts, {
-    'doh.pub': ['1.12.12.12', '120.53.53.53'],
-    'cloudflare-dns.com': ['1.1.1.1', '1.0.0.1'],
-    'dns.google': ['8.8.8.8', '8.8.4.4'],
-    'services.googleapis.cn': 'services.googleapis.com',
-    '+.mcdn.bilivideo.com': ['0.0.0.0'],
-    '+.mcdn.bilivideo.cn': ['0.0.0.0'],
-    '+.edge.mountaintoys.cn': ['0.0.0.0'],
-    '+.h2.smtcdns.net': ['0.0.0.0']
-  });
-
-  config['ntp'] = {
-    enable: true,
-    'write-to-system': false,
-    server: 'ntp.aliyun.com',
-    port: 123,
-    interval: 60
-  };
-
-  config['tun'] = {
-    enable: true,
-    stack: 'mips',
-    'auto-route': true,
-    'strict-route': true,
-    'auto-redirect': true,
-    'auto-detect-interface': true,
-    'dns-hijack': ['any:53', 'tcp://any:53']
-  };
-
-  // 4. 正则表达式定义（严格原版，含边界隔离防误判）
-  const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
-  const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
-  const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
-  const usPattern = '(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)';
-  const sgPattern = '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
-  const twPattern = '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
-  const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
-
-  const globalExclude = `(?i)${globalPattern}`;
-  const hkFilter = `(?i)${hkPattern}`;
-  const jpFilter = `(?i)${jpPattern}`;
-  const usFilter = `(?i)${usPattern}`;
-  const sgFilter = `(?i)${sgPattern}`;
-  const twFilter = `(?i)${twPattern}`;
-  const otherExclude = `(?i)(${excludeMainlandPattern}|${globalPattern})`;
-
-  const globalExcludeRegex = new RegExp(globalPattern, 'i');
-  const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
-  const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
-
-  // 匹配所有标准国旗 Emoji，若已有则严禁再次追加
-  const hasFlagRegex = /(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD83C\uDFC1\uD83C\uDFF3\uD83C\uDFF4]|[\u2690\u2691]/;
-
-  // 5. 节点预处理
+  // 2. 节点预处理（补国旗与倍率/垃圾过滤）
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -256,19 +199,8 @@ function main(config) {
     if (ruleOptionsEnable.过滤低倍率节点 && lowRateFilter.test(name)) continue;
     if (ruleOptionsEnable.过滤高倍率节点 && highRateFilter.test(name)) continue;
 
-    // 自动补国旗逻辑（已有任何国旗则不补；严格按原版正则前置匹配，杜绝 AUS/RUS 混入美国）
-    if (ruleOptionsEnable.自动补国旗 && !hasFlagRegex.test(name)) {
-      if (new RegExp(hkPattern, 'i').test(name)) {
-        name = `🇭🇰 ${name}`;
-      } else if (new RegExp(jpPattern, 'i').test(name)) {
-        name = `🇯🇵 ${name}`;
-      } else if (new RegExp(usPattern, 'i').test(name)) {
-        name = `🇺🇸 ${name}`;
-      } else if (new RegExp(sgPattern, 'i').test(name)) {
-        name = `🇸🇬 ${name}`;
-      } else if (new RegExp(twPattern, 'i').test(name)) {
-        name = `🇹🇼 ${name}`;
-      }
+    if (ruleOptionsEnable.自动补国旗) {
+      name = autoAppendFlag(name);
       proxy.name = name;
     }
 
@@ -281,7 +213,108 @@ function main(config) {
     config.proxies = processedProxies;
   }
 
-  // 6. 构造基础组与地区列表
+  // 3. DNS 与 Hosts 继承提取（彻底解决 Timeout）
+  const originalDns = config['dns'] || {};
+  const originalHosts = config['hosts'] || {};
+
+  // ① 基础 Hosts：预解析 DoH 域名，防止 bootstrap 死锁
+  const baseHosts = {
+    'doh.pub': ['1.12.12.12', '120.53.53.53'],
+    'dns.alidns.com': ['223.5.5.5', '223.6.6.6'],
+    'cloudflare-dns.com': ['1.1.1.1', '1.0.0.1'],
+    'dns.google': ['8.8.8.8', '8.8.4.4'],
+    'services.googleapis.cn': 'services.googleapis.com',
+    '+.mcdn.bilivideo.com': ['0.0.0.0'],
+    '+.mcdn.bilivideo.cn': ['0.0.0.0'],
+    '+.edge.mountaintoys.cn': ['0.0.0.0'],
+    '+.h2.smtcdns.net': ['0.0.0.0']
+  };
+
+  // 机场原订阅自带的 hosts 拥有最高优先级（保留节点域名到 IP 的硬映射）
+  config['hosts'] = Object.assign({}, baseHosts, originalHosts);
+
+  // ② 提取原订阅私有 DNS（置顶使用，并保留国内快速公共 DNS 作为兜底）
+  let airportPrivateDNS = [];
+  if (ruleOptionsEnable.处理私有DNS) {
+    if (Array.isArray(config['nameservers'])) {
+      airportPrivateDNS.push(...config['nameservers']);
+    }
+    if (Array.isArray(originalDns['proxy-server-nameserver'])) {
+      airportPrivateDNS.push(...originalDns['proxy-server-nameserver']);
+    }
+  }
+
+  // 过滤并清理掉可能误写的 #DIRECT 后缀
+  const cleanPrivateDNS = airportPrivateDNS
+    .filter(d => typeof d === 'string' && d.trim().length > 0)
+    .map(d => d.replace(/#.*$/, '').trim());
+
+  // proxy-server-nameserver 用于解析节点域名，不得带 #DIRECT
+  const proxyServerDNS = [
+    ...new Set([
+      ...cleanPrivateDNS,
+      'https://doh.pub/dns-query',
+      'https://dns.alidns.com/dns-query',
+      '223.5.5.5',
+      '119.29.29.29'
+    ])
+  ];
+
+  // default-nameserver 为 bootstrap DNS，严格只能使用纯 IP，严禁带策略后缀
+  const defaultDNS = ['223.5.5.5', '119.29.29.29', '114.114.114.114'];
+  const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
+  const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
+
+  const fakeIpFilters = ['geosite:private', 'geosite:cn'];
+  if (ruleOptionsEnable['FCM']) {
+    fakeIpFilters.push('geosite:googlefcm');
+  }
+
+  // 继承机场原有的 nameserver-policy（如内网域名分流解析）
+  const defaultPolicy = {
+    'geosite:private': 'system',
+    'geosite:category-entertainment-cn,douyin': ['system', '180.184.1.1', '180.184.2.2'],
+    'geosite:cn': chinaDNS
+  };
+  const nameserverPolicy = Object.assign({}, defaultPolicy, originalDns['nameserver-policy'] || {});
+
+  config['dns'] = {
+    enable: true,
+    ipv6: true,
+    'use-hosts': true,
+    'cache-algorithm': 'arc',
+    'use-system-hosts': true,
+    'enhanced-mode': 'fake-ip',
+    'fake-ip-range': '198.18.0.1/15',
+    'fake-ip-range6': '2001:2::1/48',
+    'fake-ip-filter': fakeIpFilters,
+    'default-nameserver': defaultDNS,
+    'proxy-server-nameserver': proxyServerDNS,
+    nameserver: foreignDNS,
+    'nameserver-policy': nameserverPolicy,
+    'direct-nameserver': chinaDNS,
+    'direct-nameserver-follow-policy': true
+  };
+
+  config['ntp'] = {
+    enable: true,
+    'write-to-system': false,
+    server: 'ntp.aliyun.com',
+    port: 123,
+    interval: 60
+  };
+
+  config['tun'] = {
+    enable: true,
+    stack: 'system',
+    'auto-route': true,
+    'strict-route': true,
+    'auto-redirect': true,
+    'auto-detect-interface': true,
+    'dns-hijack': ['any:53', 'tcp://any:53']
+  };
+
+  // 4. 构造基础组与地区列表
   const allProxyNames = (config.proxies || []).map(p => p.name);
   
   const basicFunctionGroups = [];
@@ -295,12 +328,8 @@ function main(config) {
   }
 
   const rateGroupsList = [];
-  if (ruleOptionsEnable.生成低倍率组) {
-    rateGroupsList.push('LowGroup');
-  }
-  if (ruleOptionsEnable.生成高倍率组) {
-    rateGroupsList.push('HighGroup');
-  }
+  if (ruleOptionsEnable.生成低倍率组) rateGroupsList.push('LowGroup');
+  if (ruleOptionsEnable.生成高倍率组) rateGroupsList.push('HighGroup');
 
   const manualGroupProxies = [
     ...baseRegionList,
@@ -313,7 +342,7 @@ function main(config) {
     ? [...commonProxies, ...allProxyNames]
     : commonProxies;
 
-  // 7. 策略组构建
+  // 5. 策略组构建
   const groups = [];
 
   // ① Manual
@@ -398,7 +427,7 @@ function main(config) {
     });
   }
 
-  // ⑥ 国家策略组（严格 5 大主流地区 + Other）
+  // ⑥ 国家策略组
   if (!ruleOptionsEnable.极简模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
@@ -472,7 +501,7 @@ function main(config) {
 
   config['proxy-groups'] = groups;
 
-  // 8. 规则集定义
+  // 6. 规则集定义
   const cProvider = { type: 'http', behavior: 'classical', format: 'text', interval: 86400 };
   const domainMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'domain' };
   const ipMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'ipcidr' };
@@ -512,7 +541,7 @@ function main(config) {
     pikpak: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/pikpak.mrs`, path: './ruleset/pikpak.mrs' }
   };
 
-  // 9. 分流规则构建
+  // 7. 分流规则构建
   const rules = [
     'RULE-SET,Lan,DIRECT',
     'RULE-SET,Direct,DIRECT',
