@@ -41,37 +41,36 @@ const serviceConfigs = [
 ];
 
 /**
- * 自定义配置选项（Bettbox GUI 会动态注入并覆写此变量）
- * true = 启用, false = 禁用
+ * 自定义配置选项
  */
 var ruleOptionsEnable = {
   // 基础策略组开关
-  'Manual': true,      // 核心聚合策略组
-  'SelectGroup': true, // 手动选择所有单节点
-  'AutoGroup': true,   // 自动优选所有单节点
-  'LoadBalance': true, // 负载均衡所有单节点
+  'Manual': true,
+  'SelectGroup': true,
+  'AutoGroup': true,
+  'LoadBalance': true,
 
   // 分流服务策略配置
-  FCM: true,          // Google FCM 服务
-  Microsoft: true,    // Microsoft 微软服务
-  Apple: true,        // Apple 苹果服务
-  GitHub: true,       // GitHub 代码托管平台
-  Steam: true,        // Steam 游戏平台
-  Meta: true,         // Meta 脸书相关
-  Line: true,         // Line 通讯软件
-  PikPak: true,       // PikPak 网盘服务
-  AdBlock: true,      // 广告拦截
-  Speedtest: true,    // Speedtest 测速服务
-  AI: true,           // 国外 AI 服务 (ChatGPT/Claude/Gemini等)
-  Spotify: true,      // Spotify 音乐流媒体
-  YouTube: true,      // YouTube 视频平台
-  Google: true,       // Google 搜索与全家桶服务
-  Telegram: true,     // Telegram 通讯软件
-  Twitter: true,      // Twitter 社交平台
-  Instagram: true,    // Instagram 图片社交
-  Emby: true,         // Emby 媒体服务
-  Streaming: true,    // 国外流媒体平台 (Netflix/Disney+/HBO等)
-  TikTok: true,       // TikTok 海外短视频平台
+  FCM: true,
+  Microsoft: true,
+  Apple: true,
+  GitHub: true,
+  Steam: true,
+  Meta: true,
+  Line: true,
+  PikPak: true,
+  AdBlock: true,
+  Speedtest: true,
+  AI: true,
+  Spotify: true,
+  YouTube: true,
+  Google: true,
+  Telegram: true,
+  Twitter: true,
+  Instagram: true,
+  Emby: true,
+  Streaming: true,
+  TikTok: true,
 
   // 功能增强开关
   自动补国旗: true,
@@ -106,79 +105,83 @@ Compatible_With_Bettbox.policyGroupOptions = [
 ];
 
 /**
- * 自动补齐国旗 Emoji
+ * 严格按照原版的国家/地区定义（带边界防误匹配，如防止 RUS 匹配成 US）
  */
-function appendFlagEmoji(name) {
-  const emojiRegex = /[\uD83C][\uDDE6-\uDDFF]{2}/;
-  if (emojiRegex.test(name)) return name;
+const regionConfigs = [
+  { flag: '🇭🇰', name: 'HK', pattern: '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png' },
+  { flag: '🇯🇵', name: 'JP', pattern: '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png' },
+  { flag: '🇺🇸', name: 'US', pattern: '(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png' },
+  { flag: '🇸🇬', name: 'SG', pattern: '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png' },
+  { flag: '🇹🇼', name: 'TW', pattern: '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png' }
+];
 
-  const flagMap = [
-    { flag: '🇭🇰', pattern: /(香港|HK|HKG|Hong\s*Kong)/i },
-    { flag: '🇯🇵', pattern: /(日本|JP|JPN|Japan|东京|大阪|京都)/i },
-    { flag: '🇺🇸', pattern: /(美国|US|USA|United\s*States|America|纽约|洛杉矶|旧金山|西雅图|芝加哥)/i },
-    { flag: '🇸🇬', pattern: /(新加坡|SG|SGP|Singapore|狮城)/i },
-    { flag: '🇹🇼', pattern: /(台湾|TW|TWN|Taiwan|台北|高雄)/i },
-    { flag: '🇰🇷', pattern: /(韩国|KR|KOR|Korea|首尔)/i },
-    { flag: '🇬🇧', pattern: /(英国|UK|GB|Great\s*Britain|London|伦敦)/i },
-    { flag: '🇩🇪', pattern: /(德国|DE|DEU|Germany|法兰克福)/i },
-    { flag: '🇫🇷', pattern: /(法国|FR|FRA|France|巴黎)/i },
-    { flag: '🇦🇺', pattern: /(澳大利亚|澳洲|AU|AUS|Australia|悉尼)/i },
-    { flag: '🇨🇦', pattern: /(加拿大|CA|CAN|Canada)/i },
-    { flag: '🇲🇾', pattern: /(马来西亚|MY|MYS|Malaysia)/i },
-    { flag: '🇹🇭', pattern: /(泰国|TH|THA|Thailand)/i },
-    { flag: '🇵🇭', pattern: /(菲律宾|PH|PHL|Philippines)/i },
-    { flag: '🇮🇳', pattern: /(印度|IN|IND|India)/i },
-    { flag: '🇷🇺', pattern: /(俄罗斯|RU|RUS|Russia|莫斯科)/i },
-    { flag: '🇳🇱', pattern: /(荷兰|NL|NLD|Netherlands|阿姆斯特丹)/i }
-  ];
+// 检测是否包含任意区域符号（国旗 Emoji 代理对）
+const hasFlagEmojiRegex = /[\uD83C][\uDDE6-\uDDFF]{2}/;
 
-  for (const item of flagMap) {
-    if (item.pattern.test(name)) {
-      return `${item.flag} ${name}`;
+/**
+ * 原版自动补国旗逻辑：先检查是否已经存在国旗，没有则按正则前置添加
+ */
+function autoAppendFlag(name) {
+  if (!name) return '';
+  if (hasFlagEmojiRegex.test(name)) {
+    return name; // 原生已有国旗，不再叠加
+  }
+
+  for (const reg of regionConfigs) {
+    const regExp = new RegExp(reg.pattern, 'i');
+    if (regExp.test(name)) {
+      return `${reg.flag} ${name}`;
     }
   }
   return name;
 }
 
 /**
- * 提取节点域名与机场私有 DNS
+ * 原版私有 DNS 与节点域名解析处理：
+ * 提取订阅中的 nameservers 与节点服务器域名，挂入 nameserver-policy 直连解析防死锁
  */
 function handlePrivateDnsAndHosts(config) {
+  if (!config.dns) config.dns = {};
+  const nameserverPolicy = config.dns['nameserver-policy'] || {};
+  const proxyServerNameservers = config.dns['proxy-server-nameserver'] || [];
+
+  // 1. 抓取订阅原配置中定义的 nameservers 放入 proxy-server-nameserver
+  if (Array.isArray(config.nameservers)) {
+    config.nameservers.forEach(dns => {
+      if (!proxyServerNameservers.includes(dns)) {
+        proxyServerNameservers.push(dns);
+      }
+    });
+  }
+
+  // 2. 扫描节点域名（排除纯 IP）
   const rawProxies = config.proxies || [];
-  const hosts = config.hosts || {};
-  const nameserverPolicy = config.dns?.['nameserver-policy'] || {};
-
-  // 1. 探测机场订阅中自带的私有/自定义 DNS (部分机场在订阅顶部或特殊节点中定义)
-  const privateDnsServers = [];
-  if (Array.isArray(config['nameservers'])) {
-    privateDnsServers.push(...config['nameservers']);
-  }
-  if (config.dns && Array.isArray(config.dns['proxy-server-nameserver'])) {
-    privateDnsServers.push(...config.dns['proxy-server-nameserver']);
-  }
-
-  // 2. 遍历提取节点中的 server 域名
-  const nodeDomains = new Set();
   const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/;
-  const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+  const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+  const ipv6Regex = /^\[?[a-fA-F0-9:]+\]?$/;
 
-  rawProxies.forEach(proxy => {
-    const server = proxy.server;
-    if (server && !ipv4Regex.test(server) && domainRegex.test(server)) {
-      nodeDomains.add(server);
+  const nodeDomains = [];
+  rawProxies.forEach(p => {
+    const s = p.server;
+    if (s && !ipv4Regex.test(s) && !ipv6Regex.test(s) && domainRegex.test(s)) {
+      if (!nodeDomains.includes(s)) {
+        nodeDomains.push(s);
+      }
     }
   });
 
-  // 3. 将节点域名写入 hosts 直连解析，防止节点连通前 DNS 死锁
-  nodeDomains.forEach(domain => {
-    // 自动为节点域名分配合适的 nameserver-policy 直连解析
-    nameserverPolicy[domain] = nameserverPolicy[domain] || ['119.29.29.29', '223.5.5.5'];
-  });
-
-  if (config.dns) {
-    config.dns['nameserver-policy'] = nameserverPolicy;
+  // 3. 节点域名绑定直连 DNS 解析
+  if (nodeDomains.length > 0) {
+    const directDnsList = ['119.29.29.29', '223.5.5.5'];
+    nodeDomains.forEach(domain => {
+      if (!nameserverPolicy[domain]) {
+        nameserverPolicy[domain] = directDnsList;
+      }
+    });
   }
-  config.hosts = hosts;
+
+  config.dns['proxy-server-nameserver'] = proxyServerNameservers;
+  config.dns['nameserver-policy'] = nameserverPolicy;
 }
 
 function main(config) {
@@ -277,11 +280,12 @@ function main(config) {
 
   // 4. 正则表达式定义
   const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
-  const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
-  const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
-  const usPattern = '(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)';
-  const sgPattern = '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
-  const twPattern = '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
+  
+  const hkPattern = regionConfigs.find(r => r.name === 'HK').pattern;
+  const jpPattern = regionConfigs.find(r => r.name === 'JP').pattern;
+  const usPattern = regionConfigs.find(r => r.name === 'US').pattern;
+  const sgPattern = regionConfigs.find(r => r.name === 'SG').pattern;
+  const twPattern = regionConfigs.find(r => r.name === 'TW').pattern;
   const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
 
   const globalExclude = `(?i)${globalPattern}`;
@@ -296,7 +300,7 @@ function main(config) {
   const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
   const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
-  // 5. 节点预处理（含自动补国旗与 IP 版本偏好）
+  // 5. 节点预处理（补国旗、过滤与 IP 偏好设置）
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -313,9 +317,8 @@ function main(config) {
     if (ruleOptionsEnable.过滤低倍率节点 && lowRateFilter.test(name)) continue;
     if (ruleOptionsEnable.过滤高倍率节点 && highRateFilter.test(name)) continue;
 
-    // 自动补齐国旗 Emoji
     if (ruleOptionsEnable.自动补国旗) {
-      name = appendFlagEmoji(name);
+      name = autoAppendFlag(name);
       proxy.name = name;
     }
 
@@ -324,11 +327,12 @@ function main(config) {
     }
     processedProxies.push(proxy);
   }
+
   if (processedProxies.length > 0) {
     config.proxies = processedProxies;
   }
 
-  // 执行私有 DNS 与节点域名 hosts 自动映射
+  // 执行私有 DNS 自动接入与节点域名 Policy 挂载
   if (ruleOptionsEnable.处理私有DNS) {
     handlePrivateDnsAndHosts(config);
   }
@@ -347,12 +351,8 @@ function main(config) {
   }
 
   const rateGroupsList = [];
-  if (ruleOptionsEnable.生成低倍率组) {
-    rateGroupsList.push('LowGroup');
-  }
-  if (ruleOptionsEnable.生成高倍率组) {
-    rateGroupsList.push('HighGroup');
-  }
+  if (ruleOptionsEnable.生成低倍率组) rateGroupsList.push('LowGroup');
+  if (ruleOptionsEnable.生成高倍率组) rateGroupsList.push('HighGroup');
 
   const manualGroupProxies = [
     ...baseRegionList,
@@ -365,7 +365,7 @@ function main(config) {
     ? [...commonProxies, ...allProxyNames]
     : commonProxies;
 
-  // 7. 策略组构建（严格按指定顺序组装）
+  // 7. 策略组构建
   const groups = [];
 
   // ① Manual
@@ -450,7 +450,7 @@ function main(config) {
     });
   }
 
-  // ⑥ 国家策略组（含地区优选组与拆分倍率组）
+  // ⑥ 国家策略组
   if (!ruleOptionsEnable.极简模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
