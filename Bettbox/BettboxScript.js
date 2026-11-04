@@ -1,7 +1,52 @@
 // ==========================================
 // Bettbox GUI 可视化选项
 // ==========================================
-const Compatible_With_Bettbox = { ruleOptionsEnable: true };
+const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/svg/';
+
+const Compatible_With_Bettbox = { 
+  ruleOptionsEnable: true,
+  ruleOptionsIcons: {
+    // 基础策略组
+    'Manual': `${iconBaseUrl}Proxy.svg`,
+    'Select-Group': `${iconBaseUrl}Static.svg`,
+    'Auto-Group': `${iconBaseUrl}Auto.svg`,
+    'Load-Balance': `${iconBaseUrl}RoundRobin.svg`,
+
+    // 分流服务策略组
+    'FCM': `${iconBaseUrl}Fcm.svg`,
+    'Microsoft': `${iconBaseUrl}Microsoft.svg`,
+    'Apple': `${iconBaseUrl}Apple.svg`,
+    'Steam': `${iconBaseUrl}Steam.svg`,
+    'Meta': `${iconBaseUrl}Meta.svg`,
+    'Line': `${iconBaseUrl}Line.svg`,
+    'PikPak': `${iconBaseUrl}PikPak.svg`,
+    'AdBlock': `${iconBaseUrl}AdBlock.svg`,
+    'Speedtest': `${iconBaseUrl}Speedtest.svg`,
+    'AI': `${iconBaseUrl}OpenAI.svg`,
+    'Spotify': `${iconBaseUrl}Spotify.svg`,
+    'YouTube': `${iconBaseUrl}YouTube.svg`,
+    'Google': `${iconBaseUrl}Google.svg`,
+    'Telegram': `${iconBaseUrl}Telegram.svg`,
+    'Twitter': `${iconBaseUrl}Twitter.svg`,
+    'Instagram': `${iconBaseUrl}Instagram.svg`,
+    'Emby': `${iconBaseUrl}Emby.svg`,
+    'Streaming': 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png',
+    'TikTok': `${iconBaseUrl}TikTok.svg`,
+
+    // 其他设置开关图标
+    '极简模式': `${iconBaseUrl}Proxy.svg`,
+    '生成地区自动选择组': `${iconBaseUrl}Auto.svg`,
+    '隐藏地区手动选择组': `${iconBaseUrl}Static.svg`,
+    '生成倍率组': `${iconBaseUrl}Available.svg`,
+    '分流组添加所有节点': `${iconBaseUrl}Global.svg`,
+    '过滤低倍率节点': `${iconBaseUrl}Available.svg`,
+    '过滤高倍率节点': `${iconBaseUrl}Airport.svg`,
+    '过滤非地区节点': `${iconBaseUrl}WorldMap.svg`,
+    '屏蔽国外QUIC': `${iconBaseUrl}Reject.svg`,
+    '代理IPV4优先': `${iconBaseUrl}China.svg`,
+    '代理IPV6优先': `${iconBaseUrl}China.svg`
+  }
+};
 
 /**
  * 自定义配置选项（Bettbox GUI 会动态注入并覆写此变量）
@@ -58,13 +103,11 @@ Compatible_With_Bettbox.policyGroupOptions = [
   'HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto',
   'Low-Group', 'High-Group',
   'FCM', 'Microsoft', 'Apple', 'Steam', 'Meta', 'Line', 'PikPak', 'AdBlock',
-  'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
+  'Speedtest', 'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
   'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
 ];
 
 function main(config) {
-  // 图标与规则集 URL 公共前缀
-  const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/svg/';
   const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
   // 1. 全局运行参数与界面配置
@@ -160,19 +203,26 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53']
   };
 
-  // 4. 正则表达式定义
-  const globalExclude = '(?i)(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
-  const hkFilter = '(?i)(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
-  const jpFilter = '(?i)(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
-  const usFilter = '(?i)(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)';
-  const sgFilter = '(?i)(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
-  const twFilter = '(?i)(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
-  const excludeMainlandRegions = '(?i)(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong|🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan|🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states|🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore|🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
-  
+  // 4. 正则表达式定义（去除非 JS 语法的 (?i) 前缀，避免 invalid group 报错）
+  const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
+  const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
+  const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
+  const usPattern = '(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)';
+  const sgPattern = '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
+  const twPattern = '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
+  const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
+
+  const globalExclude = `(?i)${globalPattern}`;
+  const hkFilter = `(?i)${hkPattern}`;
+  const jpFilter = `(?i)${jpPattern}`;
+  const usFilter = `(?i)${usPattern}`;
+  const sgFilter = `(?i)${sgPattern}`;
+  const twFilter = `(?i)${twPattern}`;
+  const otherExclude = `(?i)(${excludeMainlandPattern}|${globalPattern})`;
+
+  const globalExcludeRegex = new RegExp(globalPattern, 'i');
   const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
   const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
-
-  const otherExclude = `${excludeMainlandRegions}|${globalExclude}`;
 
   // 5. 节点预处理：根据开关处理 IP优先 与 倍率/非地区过滤
   let ipPref = null;
@@ -181,7 +231,6 @@ function main(config) {
 
   const rawProxies = config.proxies || [];
   const processedProxies = [];
-  const globalExcludeRegex = new RegExp(globalExclude, 'i');
 
   for (const proxy of rawProxies) {
     const type = String(proxy.type || '').toLowerCase();
@@ -301,16 +350,17 @@ function main(config) {
       { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
       { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
       { name: 'Line', icon: `${iconBaseUrl}Line.svg` },
+      { name: 'Speedtest', icon: `${iconBaseUrl}Speedtest.svg`, direct: true },
       { name: 'AI', icon: `${iconBaseUrl}OpenAI.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] },
-      { name: 'Telegram', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png' },
-      { name: 'Google', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Google_Search.png' },
+      { name: 'Telegram', icon: `${iconBaseUrl}Telegram.svg` },
+      { name: 'Google', icon: `${iconBaseUrl}Google.svg` },
       { name: 'Streaming', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png' },
-      { name: 'YouTube', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/youtube.png' },
-      { name: 'Spotify', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Spotify.png' },
-      { name: 'Emby', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/emby.png' },
-      { name: 'TikTok', icon: 'https://raw.githubusercontent.com/fmz200/wool_scripts/main/icons/apps/TikTok_01.png' },
-      { name: 'Twitter', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/twitter.png' },
-      { name: 'Instagram', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Instagram.png' },
+      { name: 'YouTube', icon: `${iconBaseUrl}YouTube.svg` },
+      { name: 'Spotify', icon: `${iconBaseUrl}Spotify.svg` },
+      { name: 'Emby', icon: `${iconBaseUrl}Emby.svg` },
+      { name: 'TikTok', icon: `${iconBaseUrl}TikTok.svg` },
+      { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },
+      { name: 'Instagram', icon: `${iconBaseUrl}Instagram.svg` },
       { name: 'Final', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png' }
     ];
 
@@ -480,7 +530,8 @@ function main(config) {
     if (ruleOptionsEnable.Line) rules.push('RULE-SET,line,Line');
     if (ruleOptionsEnable.PikPak) rules.push('RULE-SET,pikpak,PikPak');
 
-    if (ruleOptionsEnable.Speedtest) rules.push('RULE-SET,Speedtest,Final');
+    if (ruleOptionsEnable.Speedtest) rules.push('RULE-SET,Speedtest,Speedtest');
+
     if (ruleOptionsEnable.AI) rules.push('RULE-SET,AI,AI');
     if (ruleOptionsEnable.Spotify) rules.push('RULE-SET,Spotify,Spotify');
     if (ruleOptionsEnable.YouTube) rules.push('RULE-SET,YouTube,YouTube');
