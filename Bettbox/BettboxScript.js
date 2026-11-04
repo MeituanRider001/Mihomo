@@ -102,7 +102,7 @@ Compatible_With_Bettbox.policyGroupOptions = [
 ];
 
 // ==========================================
-// 1. 原版精准地区定义与正则
+// 1. 原版地区正则（带严格单词边界）
 // ==========================================
 const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
 const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
@@ -126,9 +126,10 @@ const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕
 const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
 // ==========================================
-// 2. 自动补国旗（精准防重）
+// 2. 深度国旗 Emoji 检测与自动补充
 // ==========================================
-const flagEmojiRegex = /(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD83C\uDFC1\uD83C\uDFF3\uD83C\uDFF4]/;
+// 严格匹配区域指标符号（Regional Indicator）、旗帜符号以及变体选择符 \uFE0F
+const flagDetectionRegex = /(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD83C\uDFC1\uD83C\uDFF3\uD83C\uDFF4]|[\u2690\u2691]/;
 
 const flagMatchRules = [
   { flag: '🇭🇰', reg: /(?:香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\s*kong)/i },
@@ -140,7 +141,8 @@ const flagMatchRules = [
 
 function autoAppendFlag(name) {
   if (!name) return '';
-  if (flagEmojiRegex.test(name)) {
+  // 只要名称中已存在任何国旗字符，绝不重复添加
+  if (flagDetectionRegex.test(name)) {
     return name;
   }
   for (const item of flagMatchRules) {
@@ -152,70 +154,68 @@ function autoAppendFlag(name) {
 }
 
 // ==========================================
-// 3. 原版私有 DNS 与节点域名 hosts 自动映射完整实现
+// 3. 机场私有 DNS 与节点域名 hosts 完整继承与映射
 // ==========================================
-function handlePrivateDnsAndHosts(config) {
-  if (!config.dns) config.dns = {};
-  if (!config.hosts) config.hosts = {};
+function processPrivateDnsAndHosts(config) {
+  // 1. 保留原订阅内的原始 hosts 与 dns
+  const origHosts = config.hosts || {};
+  const origDns = config.dns || {};
+  const origProxyServerDns = Array.isArray(origDns['proxy-server-nameserver']) ? origDns['proxy-server-nameserver'] : [];
+  const origPolicy = origDns['nameserver-policy'] || {};
 
-  const dns = config.dns;
-  const hosts = config.hosts;
-  const nameserverPolicy = dns['nameserver-policy'] || {};
-  let proxyServerDns = Array.isArray(dns['proxy-server-nameserver']) ? dns['proxy-server-nameserver'] : [];
-
-  // (1) 提取订阅原配置中的私有 nameservers
-  const rawDnsList = [];
+  // 2. 探测原配置顶层或 dns 中的私有 nameserver
+  const privateDnsList = [];
   if (Array.isArray(config.nameservers)) {
-    rawDnsList.push(...config.nameservers);
+    config.nameservers.forEach(ns => {
+      if (!privateDnsList.includes(ns)) privateDnsList.push(ns);
+    });
   }
-  if (config.dns && Array.isArray(config.dns.nameserver)) {
-    rawDnsList.push(...config.dns.nameserver);
+  if (Array.isArray(origDns.nameserver)) {
+    origDns.nameserver.forEach(ns => {
+      if (typeof ns === 'string' && !privateDnsList.includes(ns)) privateDnsList.push(ns);
+    });
   }
 
-  // 区分并提取私有自定义 DNS（例如纯 IP、带端口或特定协议的机场私有上游）
-  const ipWithPortRegex = /^(?:https?:\/\/|tls:\/\/)?((?:\d{1,3}\.){3}\d{1,3}|\[?[a-fA-F0-9:]+\]?)(?::\d+)?(?:\/.*)?$/;
-  rawDnsList.forEach(srv => {
-    if (typeof srv === 'string' && srv.trim()) {
-      const match = srv.match(ipWithPortRegex);
-      if (match && !proxyServerDns.includes(srv)) {
-        proxyServerDns.push(srv);
-      }
-    }
-  });
+  // 合并 proxy-server-nameserver
+  const mergedProxyDns = [...new Set([...origProxyServerDns, ...privateDnsList])];
 
-  // (2) 提取节点域名与 hosts 映射，防止节点连通前 DNS 死锁
+  // 3. 扫描节点域名（提取 server 与 sni）
   const rawProxies = config.proxies || [];
   const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/;
   const isIpRegex = /^(?:\d{1,3}\.){3}\d{1,3}$|^\[?[a-fA-F0-9:]+\]?$/;
 
   const nodeDomains = new Set();
-  rawProxies.forEach(proxy => {
-    if (proxy.server && !isIpRegex.test(proxy.server) && domainRegex.test(proxy.server)) {
-      nodeDomains.add(proxy.server);
+  rawProxies.forEach(p => {
+    if (p.server && !isIpRegex.test(p.server) && domainRegex.test(p.server)) {
+      nodeDomains.add(p.server);
     }
-    if (proxy.sni && !isIpRegex.test(proxy.sni) && domainRegex.test(proxy.sni)) {
-      nodeDomains.add(proxy.sni);
+    if (p.sni && !isIpRegex.test(p.sni) && domainRegex.test(p.sni)) {
+      nodeDomains.add(p.sni);
     }
-    if (proxy['reality-opts'] && proxy['reality-opts']['server-name']) {
-      const sni = proxy['reality-opts']['server-name'];
+    if (p['reality-opts'] && p['reality-opts']['server-name']) {
+      const sni = p['reality-opts']['server-name'];
       if (!isIpRegex.test(sni) && domainRegex.test(sni)) {
         nodeDomains.add(sni);
       }
     }
   });
 
-  // (3) 将探测到的节点域名绑定至 nameserver-policy，优先使用 proxy-server-nameserver 直连解析
-  const fallbackDirectDns = ['119.29.29.29', '223.5.5.5'];
-  const resolveTarget = proxyServerDns.length > 0 ? proxyServerDns : fallbackDirectDns;
+  // 4. 将节点域名写入 nameserver-policy 直连解析
+  const cleanDirectDns = mergedProxyDns.length > 0 ? mergedProxyDns : ['223.5.5.5', '119.29.29.29'];
+  const newPolicy = { ...origPolicy };
 
   nodeDomains.forEach(domain => {
-    if (!nameserverPolicy[domain]) {
-      nameserverPolicy[domain] = resolveTarget;
+    // 若原配置未指定该域名的专有解析，则挂载直连 DNS 避免 Fake-IP 死锁
+    if (!newPolicy[domain]) {
+      newPolicy[domain] = cleanDirectDns;
     }
   });
 
-  dns['proxy-server-nameserver'] = proxyServerDns.length > 0 ? proxyServerDns : fallbackDirectDns;
-  dns['nameserver-policy'] = nameserverPolicy;
+  return {
+    mergedHosts: origHosts,
+    mergedProxyDns: cleanDirectDns,
+    mergedPolicy: newPolicy
+  };
 }
 
 function main(config) {
@@ -249,70 +249,7 @@ function main(config) {
     asn: "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb"
   };
 
-  // 2. DNS 配置
-  const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
-  const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
-  const defaultDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
-  const proxyServerDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
-
-  const fakeIpFilters = ['geosite:private', 'geosite:cn'];
-  if (ruleOptionsEnable['FCM']) {
-    fakeIpFilters.push('geosite:googlefcm');
-  }
-
-  config['dns'] = {
-    enable: true,
-    ipv6: true,
-    'use-hosts': true,
-    'cache-algorithm': 'arc',
-    'use-system-hosts': true,
-    'enhanced-mode': 'fake-ip',
-    'fake-ip-range': '198.18.0.1/15',
-    'fake-ip-range6': '2001:2::1/48',
-    'fake-ip-filter': fakeIpFilters,
-    'default-nameserver': defaultDNS,
-    'proxy-server-nameserver': proxyServerDNS,
-    nameserver: foreignDNS,
-    'nameserver-policy': {
-      'geosite:private': 'system',
-      'geosite:category-entertainment-cn,douyin': ['system', '180.184.1.1', '180.184.2.2'],
-      'geosite:cn': chinaDNS
-    },
-    'direct-nameserver': chinaDNS,
-    'direct-nameserver-follow-policy': true
-  };
-
-  // 3. Hosts 与 NTP 配置
-  config['hosts'] = {
-    'doh.pub': ['1.12.12.12', '120.53.53.53'],
-    'cloudflare-dns.com': ['1.1.1.1', '1.0.0.1'],
-    'dns.google': ['8.8.8.8', '8.8.4.4'],
-    'services.googleapis.cn': 'services.googleapis.com',
-    '+.mcdn.bilivideo.com': ['0.0.0.0'],
-    '+.mcdn.bilivideo.cn': ['0.0.0.0'],
-    '+.edge.mountaintoys.cn': ['0.0.0.0'],
-    '+.h2.smtcdns.net': ['0.0.0.0']
-  };
-
-  config['ntp'] = {
-    enable: true,
-    'write-to-system': false,
-    server: 'ntp.aliyun.com',
-    port: 123,
-    interval: 60
-  };
-
-  config['tun'] = {
-    enable: true,
-    stack: 'mips',
-    'auto-route': true,
-    'strict-route': true,
-    'auto-redirect': true,
-    'auto-detect-interface': true,
-    'dns-hijack': ['any:53', 'tcp://any:53']
-  };
-
-  // 4. 节点预处理（补国旗、过滤与 IP 偏好设置）
+  // 2. 节点预处理（补国旗、过滤与 IP 偏好设置）
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -344,10 +281,81 @@ function main(config) {
     config.proxies = processedProxies;
   }
 
-  // 执行私有 DNS 自动接入与节点域名 Policy 挂载
+  // 3. 执行私有 DNS 与 Hosts 继承提取（绝不全量覆盖原配置）
+  let finalHosts = {
+    'doh.pub': ['1.12.12.12', '120.53.53.53'],
+    'cloudflare-dns.com': ['1.1.1.1', '1.0.0.1'],
+    'dns.google': ['8.8.8.8', '8.8.4.4'],
+    'services.googleapis.cn': 'services.googleapis.com',
+    '+.mcdn.bilivideo.com': ['0.0.0.0'],
+    '+.mcdn.bilivideo.cn': ['0.0.0.0'],
+    '+.edge.mountaintoys.cn': ['0.0.0.0'],
+    '+.h2.smtcdns.net': ['0.0.0.0']
+  };
+
+  let proxyServerDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
+  let nameserverPolicy = {
+    'geosite:private': 'system',
+    'geosite:category-entertainment-cn,douyin': ['system', '180.184.1.1', '180.184.2.2'],
+    'geosite:cn': ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT']
+  };
+
   if (ruleOptionsEnable.处理私有DNS) {
-    handlePrivateDnsAndHosts(config);
+    const dnsResult = processPrivateDnsAndHosts(config);
+    // 合并保留机场原有的 hosts 映射
+    finalHosts = Object.assign({}, dnsResult.mergedHosts, finalHosts);
+    // 注入机场的私有 DNS 与节点解析 policy
+    proxyServerDNS = dnsResult.mergedProxyDns;
+    nameserverPolicy = Object.assign({}, nameserverPolicy, dnsResult.mergedPolicy);
   }
+
+  // 4. DNS 配置组装
+  const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
+  const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
+  const defaultDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
+
+  const fakeIpFilters = ['geosite:private', 'geosite:cn'];
+  if (ruleOptionsEnable['FCM']) {
+    fakeIpFilters.push('geosite:googlefcm');
+  }
+
+  config['dns'] = {
+    enable: true,
+    ipv6: true,
+    'use-hosts': true,
+    'cache-algorithm': 'arc',
+    'use-system-hosts': true,
+    'enhanced-mode': 'fake-ip',
+    'fake-ip-range': '198.18.0.1/15',
+    'fake-ip-range6': '2001:2::1/48',
+    'fake-ip-filter': fakeIpFilters,
+    'default-nameserver': defaultDNS,
+    'proxy-server-nameserver': proxyServerDNS,
+    nameserver: foreignDNS,
+    'nameserver-policy': nameserverPolicy,
+    'direct-nameserver': chinaDNS,
+    'direct-nameserver-follow-policy': true
+  };
+
+  config['hosts'] = finalHosts;
+
+  config['ntp'] = {
+    enable: true,
+    'write-to-system': false,
+    server: 'ntp.aliyun.com',
+    port: 123,
+    interval: 60
+  };
+
+  config['tun'] = {
+    enable: true,
+    stack: 'mips',
+    'auto-route': true,
+    'strict-route': true,
+    'auto-redirect': true,
+    'auto-detect-interface': true,
+    'dns-hijack': ['any:53', 'tcp://any:53']
+  };
 
   // 5. 构造基础组与地区列表
   const allProxyNames = (config.proxies || []).map(p => p.name);
