@@ -7,7 +7,7 @@ const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/sv
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
 /**
- * 全量静态策略与图标定义表
+ * 全量静态策略与图标定义表（Bettbox GUI 核心扫描数组）
  */
 const serviceConfigs = [
   // 4个基础策略组
@@ -21,6 +21,7 @@ const serviceConfigs = [
   { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },
   { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },
   { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },
+  { name: 'GitHub', icon: `${iconBaseUrl}Github.svg`, direct: true },
   { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },
   { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
   { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
@@ -54,6 +55,7 @@ var ruleOptionsEnable = {
   FCM: true,          // Google FCM 服务
   Microsoft: true,    // Microsoft 微软服务
   Apple: true,        // Apple 苹果服务
+  GitHub: true,       // GitHub 代码托管平台
   Steam: true,        // Steam 游戏平台
   Meta: true,         // Meta 脸书相关
   Line: true,         // Line 通讯软件
@@ -71,11 +73,12 @@ var ruleOptionsEnable = {
   Streaming: true,    // 国外流媒体平台 (Netflix/Disney+/HBO等)
   TikTok: true,       // TikTok 海外短视频平台
 
-  // 其他设置（默认值与 Bettbox 界面截图对齐）
+  // 其他设置
   极简模式: false,
   生成地区自动选择组: false,
   隐藏地区手动选择组: false,
-  生成倍率组: false,
+  生成低倍率组: false, 
+  生成高倍率组: false, 
   分流组添加所有节点: false,
   过滤低倍率节点: false,
   过滤高倍率节点: false,
@@ -86,14 +89,14 @@ var ruleOptionsEnable = {
 };
 
 /**
- * 策略组选项候选池（去除所有 - 连字符）
+ * 策略组选项候选池
  */
 Compatible_With_Bettbox.policyGroupOptions = [
   'Manual', 'SelectGroup', 'AutoGroup', 'LoadBalance',
   'HK', 'SG', 'JP', 'US', 'TW', 'Other',
   'HKAuto', 'SGAuto', 'JPAuto', 'USAuto', 'TWAuto',
   'LowGroup', 'HighGroup',
-  'FCM', 'Microsoft', 'Apple', 'Steam', 'Meta', 'Line', 'PikPak', 'AdBlock',
+  'FCM', 'Microsoft', 'Apple', 'GitHub', 'Steam', 'Meta', 'Line', 'PikPak', 'AdBlock',
   'Speedtest', 'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
   'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
 ];
@@ -253,8 +256,11 @@ function main(config) {
   }
 
   const rateGroupsList = [];
-  if (ruleOptionsEnable.生成倍率组) {
-    rateGroupsList.push('LowGroup', 'HighGroup');
+  if (ruleOptionsEnable.生成低倍率组) {
+    rateGroupsList.push('LowGroup');
+  }
+  if (ruleOptionsEnable.生成高倍率组) {
+    rateGroupsList.push('HighGroup');
   }
 
   const manualGroupProxies = [
@@ -329,7 +335,6 @@ function main(config) {
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png'
     });
   } else {
-    // 遍历业务分流（过滤掉 4 个基础组）
     serviceConfigs.filter(svc => !svc.isBase).forEach(svc => {
       if (ruleOptionsEnable[svc.name] === false) return;
 
@@ -354,7 +359,7 @@ function main(config) {
     });
   }
 
-  // ⑥ 国家策略组（含倍率与地区优选组）
+  // ⑥ 国家策略组（含地区优选组与拆分倍率组）
   if (!ruleOptionsEnable.极简模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
@@ -403,7 +408,7 @@ function main(config) {
       });
     }
 
-    if (ruleOptionsEnable.生成倍率组) {
+    if (ruleOptionsEnable.生成低倍率组) {
       groups.push({
         name: 'LowGroup',
         type: 'select',
@@ -412,6 +417,9 @@ function main(config) {
         'exclude-filter': globalExclude,
         icon: `${iconBaseUrl}Available.svg`
       });
+    }
+
+    if (ruleOptionsEnable.生成高倍率组) {
       groups.push({
         name: 'HighGroup',
         type: 'select',
@@ -456,6 +464,7 @@ function main(config) {
     microsoft_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/microsoft.mrs`, path: './ruleset/microsoft_ip.mrs' },
     apple: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/apple.mrs`, path: './ruleset/apple.mrs' },
     apple_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/apple.mrs`, path: './ruleset/apple_ip.mrs' },
+    github: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/github.mrs`, path: './ruleset/github.mrs' },
     steam: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/steam.mrs`, path: './ruleset/steam.mrs' },
     steam_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/steam.mrs`, path: './ruleset/steam_ip.mrs' },
     meta: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/meta.mrs`, path: './ruleset/meta.mrs' },
@@ -486,6 +495,9 @@ function main(config) {
     }
     if (ruleOptionsEnable.Apple) {
       rules.push('RULE-SET,apple,Apple', 'RULE-SET,apple_ip,Apple');
+    }
+    if (ruleOptionsEnable.GitHub) {
+      rules.push('RULE-SET,github,GitHub');
     }
     if (ruleOptionsEnable.Steam) {
       rules.push('RULE-SET,steam,Steam', 'RULE-SET,steam_ip,Steam');
