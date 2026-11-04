@@ -21,7 +21,7 @@ const serviceConfigs = [
   { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },
   { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },
   { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },
-  { name: 'GitHub', icon: `${iconBaseUrl}Github.svg`, direct: true },
+  { name: 'GitHub', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/GitHub.png', direct: true },
   { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },
   { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
   { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
