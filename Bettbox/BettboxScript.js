@@ -41,7 +41,7 @@ const serviceConfigs = [
 ];
 
 /**
- * 自定义配置选项
+ * 自定义配置选项（Bettbox GUI 动态注入）
  */
 var ruleOptionsEnable = {
   // 基础策略组开关
@@ -91,9 +91,6 @@ var ruleOptionsEnable = {
   代理IPV6优先: false
 };
 
-/**
- * 策略组选项候选池
- */
 Compatible_With_Bettbox.policyGroupOptions = [
   'Manual', 'SelectGroup', 'AutoGroup', 'LoadBalance',
   'HK', 'SG', 'JP', 'US', 'TW', 'Other',
@@ -104,83 +101,106 @@ Compatible_With_Bettbox.policyGroupOptions = [
   'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
 ];
 
-/**
- * 严格按照原版的国家/地区定义（带边界防误匹配，如防止 RUS 匹配成 US）
- */
-const regionConfigs = [
-  { flag: '🇭🇰', name: 'HK', pattern: '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png' },
-  { flag: '🇯🇵', name: 'JP', pattern: '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png' },
-  { flag: '🇺🇸', name: 'US', pattern: '(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png' },
-  { flag: '🇸🇬', name: 'SG', pattern: '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png' },
-  { flag: '🇹🇼', name: 'TW', pattern: '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png' }
+// ==========================================
+// 1. 原版精准地区定义与正则
+// ==========================================
+const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
+const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
+const usPattern = '(🇺🇸|美国|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)';
+const sgPattern = '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
+const twPattern = '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
+
+const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
+
+const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
+const globalExclude = `(?i)${globalPattern}`;
+const hkFilter = `(?i)${hkPattern}`;
+const jpFilter = `(?i)${jpPattern}`;
+const usFilter = `(?i)${usPattern}`;
+const sgFilter = `(?i)${sgPattern}`;
+const twFilter = `(?i)${twPattern}`;
+const otherExclude = `(?i)(${excludeMainlandPattern}|${globalPattern})`;
+
+const globalExcludeRegex = new RegExp(globalPattern, 'i');
+const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
+const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
+
+// ==========================================
+// 2. 自动补国旗
+// ==========================================
+// 匹配所有标准国旗 Emoji（区域指示符号代理对及旗帜类符号）
+const flagEmojiRegex = /(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD83C\uDFC1\uD83C\uDFF3\uD83C\uDFF4]/;
+
+// 补国旗专用的文字特征库（排除国旗 Emoji 本身，避免自带国旗节点触发自匹配）
+const flagMatchRules = [
+  { flag: '🇭🇰', reg: /(?:香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\s*kong)/i },
+  { flag: '🇯🇵', reg: /(?:日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)/i },
+  { flag: '🇺🇸', reg: /(?:美国|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\s*states)/i },
+  { flag: '🇸🇬', reg: /(?:新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)/i },
+  { flag: '🇹🇼', reg: /(?:台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)/i }
 ];
 
-// 检测是否包含任意区域符号（国旗 Emoji 代理对）
-const hasFlagEmojiRegex = /[\uD83C][\uDDE6-\uDDFF]{2}/;
-
-/**
- * 原版自动补国旗逻辑：先检查是否已经存在国旗，没有则按正则前置添加
- */
 function autoAppendFlag(name) {
   if (!name) return '';
-  if (hasFlagEmojiRegex.test(name)) {
-    return name; // 原生已有国旗，不再叠加
+  // 若节点自带任何国旗 Emoji，直接跳过
+  if (flagEmojiRegex.test(name)) {
+    return name;
   }
-
-  for (const reg of regionConfigs) {
-    const regExp = new RegExp(reg.pattern, 'i');
-    if (regExp.test(name)) {
-      return `${reg.flag} ${name}`;
+  for (const item of flagMatchRules) {
+    if (item.reg.test(name)) {
+      return `${item.flag} ${name}`;
     }
   }
   return name;
 }
 
-/**
- * 原版私有 DNS 与节点域名解析处理：
- * 提取订阅中的 nameservers 与节点服务器域名，挂入 nameserver-policy 直连解析防死锁
- */
+// ==========================================
+// 3. 私有 DNS 完整处理函数
+// ==========================================
 function handlePrivateDnsAndHosts(config) {
   if (!config.dns) config.dns = {};
-  const nameserverPolicy = config.dns['nameserver-policy'] || {};
-  const proxyServerNameservers = config.dns['proxy-server-nameserver'] || [];
+  config.hosts = config.hosts || {};
 
-  // 1. 抓取订阅原配置中定义的 nameservers 放入 proxy-server-nameserver
+  const nameserverPolicy = config.dns['nameserver-policy'] || {};
+  let proxyServerDns = config.dns['proxy-server-nameserver'] || [];
+
+  // 提取订阅中的顶层私有 nameserver
   if (Array.isArray(config.nameservers)) {
-    config.nameservers.forEach(dns => {
-      if (!proxyServerNameservers.includes(dns)) {
-        proxyServerNameservers.push(dns);
+    config.nameservers.forEach(ns => {
+      if (!proxyServerDns.includes(ns)) {
+        proxyServerDns.push(ns);
       }
     });
   }
 
-  // 2. 扫描节点域名（排除纯 IP）
+  // 提取所有节点域名（排除纯 IP）
   const rawProxies = config.proxies || [];
   const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/;
-  const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/;
-  const ipv6Regex = /^\[?[a-fA-F0-9:]+\]?$/;
+  const ipRegex = /^(?:\d{1,3}\.){3}\d{1,3}$|^\[?[a-fA-F0-9:]+\]?$/;
 
-  const nodeDomains = [];
+  const nodeDomains = new Set();
   rawProxies.forEach(p => {
-    const s = p.server;
-    if (s && !ipv4Regex.test(s) && !ipv6Regex.test(s) && domainRegex.test(s)) {
-      if (!nodeDomains.includes(s)) {
-        nodeDomains.push(s);
+    if (p.server && !ipRegex.test(p.server) && domainRegex.test(p.server)) {
+      nodeDomains.add(p.server);
+    }
+    if (p.sni && !ipRegex.test(p.sni) && domainRegex.test(p.sni)) {
+      nodeDomains.add(p.sni);
+    }
+    if (p['reality-opts'] && p['reality-opts']['server-name']) {
+      const realitySni = p['reality-opts']['server-name'];
+      if (!ipRegex.test(realitySni) && domainRegex.test(realitySni)) {
+        nodeDomains.add(realitySni);
       }
     }
   });
 
-  // 3. 节点域名绑定直连 DNS 解析
-  if (nodeDomains.length > 0) {
-    const directDnsList = ['119.29.29.29', '223.5.5.5'];
-    nodeDomains.forEach(domain => {
-      if (!nameserverPolicy[domain]) {
-        nameserverPolicy[domain] = directDnsList;
-      }
-    });
-  }
+  // 将节点域名绑定到专用直连解析，防止 Fake-IP 循环握手死锁
+  const cleanDns = proxyServerDns.length > 0 ? proxyServerDns : ['223.5.5.5', '119.29.29.29'];
+  nodeDomains.forEach(domain => {
+    nameserverPolicy[domain] = cleanDns;
+  });
 
-  config.dns['proxy-server-nameserver'] = proxyServerNameservers;
+  config.dns['proxy-server-nameserver'] = proxyServerDns;
   config.dns['nameserver-policy'] = nameserverPolicy;
 }
 
@@ -278,29 +298,7 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53']
   };
 
-  // 4. 正则表达式定义
-  const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
-  
-  const hkPattern = regionConfigs.find(r => r.name === 'HK').pattern;
-  const jpPattern = regionConfigs.find(r => r.name === 'JP').pattern;
-  const usPattern = regionConfigs.find(r => r.name === 'US').pattern;
-  const sgPattern = regionConfigs.find(r => r.name === 'SG').pattern;
-  const twPattern = regionConfigs.find(r => r.name === 'TW').pattern;
-  const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
-
-  const globalExclude = `(?i)${globalPattern}`;
-  const hkFilter = `(?i)${hkPattern}`;
-  const jpFilter = `(?i)${jpPattern}`;
-  const usFilter = `(?i)${usPattern}`;
-  const sgFilter = `(?i)${sgPattern}`;
-  const twFilter = `(?i)${twPattern}`;
-  const otherExclude = `(?i)(${excludeMainlandPattern}|${globalPattern})`;
-
-  const globalExcludeRegex = new RegExp(globalPattern, 'i');
-  const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
-  const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
-
-  // 5. 节点预处理（补国旗、过滤与 IP 偏好设置）
+  // 4. 节点预处理（补国旗、过滤与 IP 偏好设置）
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -337,7 +335,7 @@ function main(config) {
     handlePrivateDnsAndHosts(config);
   }
 
-  // 6. 构造基础组与地区列表
+  // 5. 构造基础组与地区列表
   const allProxyNames = (config.proxies || []).map(p => p.name);
   
   const basicFunctionGroups = [];
@@ -365,7 +363,7 @@ function main(config) {
     ? [...commonProxies, ...allProxyNames]
     : commonProxies;
 
-  // 7. 策略组构建
+  // 6. 策略组构建
   const groups = [];
 
   // ① Manual
@@ -524,7 +522,7 @@ function main(config) {
 
   config['proxy-groups'] = groups;
 
-  // 8. 规则集定义
+  // 7. 规则集定义
   const cProvider = { type: 'http', behavior: 'classical', format: 'text', interval: 86400 };
   const domainMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'domain' };
   const ipMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'ipcidr' };
@@ -564,7 +562,7 @@ function main(config) {
     pikpak: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/pikpak.mrs`, path: './ruleset/pikpak.mrs' }
   };
 
-  // 9. 分流规则构建
+  // 8. 分流规则构建
   const rules = [
     'RULE-SET,Lan,DIRECT',
     'RULE-SET,Direct,DIRECT',
