@@ -73,6 +73,10 @@ var ruleOptionsEnable = {
   Streaming: true,    // 国外流媒体平台 (Netflix/Disney+/HBO等)
   TikTok: true,       // TikTok 海外短视频平台
 
+  // 功能增强开关
+  自动补国旗: true,
+  处理私有DNS: true,
+
   // 其他设置
   极简模式: false,
   生成地区自动选择组: false,
@@ -100,6 +104,82 @@ Compatible_With_Bettbox.policyGroupOptions = [
   'Speedtest', 'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
   'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
 ];
+
+/**
+ * 自动补齐国旗 Emoji
+ */
+function appendFlagEmoji(name) {
+  const emojiRegex = /[\uD83C][\uDDE6-\uDDFF]{2}/;
+  if (emojiRegex.test(name)) return name;
+
+  const flagMap = [
+    { flag: '🇭🇰', pattern: /(香港|HK|HKG|Hong\s*Kong)/i },
+    { flag: '🇯🇵', pattern: /(日本|JP|JPN|Japan|东京|大阪|京都)/i },
+    { flag: '🇺🇸', pattern: /(美国|US|USA|United\s*States|America|纽约|洛杉矶|旧金山|西雅图|芝加哥)/i },
+    { flag: '🇸🇬', pattern: /(新加坡|SG|SGP|Singapore|狮城)/i },
+    { flag: '🇹🇼', pattern: /(台湾|TW|TWN|Taiwan|台北|高雄)/i },
+    { flag: '🇰🇷', pattern: /(韩国|KR|KOR|Korea|首尔)/i },
+    { flag: '🇬🇧', pattern: /(英国|UK|GB|Great\s*Britain|London|伦敦)/i },
+    { flag: '🇩🇪', pattern: /(德国|DE|DEU|Germany|法兰克福)/i },
+    { flag: '🇫🇷', pattern: /(法国|FR|FRA|France|巴黎)/i },
+    { flag: '🇦🇺', pattern: /(澳大利亚|澳洲|AU|AUS|Australia|悉尼)/i },
+    { flag: '🇨🇦', pattern: /(加拿大|CA|CAN|Canada)/i },
+    { flag: '🇲🇾', pattern: /(马来西亚|MY|MYS|Malaysia)/i },
+    { flag: '🇹🇭', pattern: /(泰国|TH|THA|Thailand)/i },
+    { flag: '🇵🇭', pattern: /(菲律宾|PH|PHL|Philippines)/i },
+    { flag: '🇮🇳', pattern: /(印度|IN|IND|India)/i },
+    { flag: '🇷🇺', pattern: /(俄罗斯|RU|RUS|Russia|莫斯科)/i },
+    { flag: '🇳🇱', pattern: /(荷兰|NL|NLD|Netherlands|阿姆斯特丹)/i }
+  ];
+
+  for (const item of flagMap) {
+    if (item.pattern.test(name)) {
+      return `${item.flag} ${name}`;
+    }
+  }
+  return name;
+}
+
+/**
+ * 提取节点域名与机场私有 DNS
+ */
+function handlePrivateDnsAndHosts(config) {
+  const rawProxies = config.proxies || [];
+  const hosts = config.hosts || {};
+  const nameserverPolicy = config.dns?.['nameserver-policy'] || {};
+
+  // 1. 探测机场订阅中自带的私有/自定义 DNS (部分机场在订阅顶部或特殊节点中定义)
+  const privateDnsServers = [];
+  if (Array.isArray(config['nameservers'])) {
+    privateDnsServers.push(...config['nameservers']);
+  }
+  if (config.dns && Array.isArray(config.dns['proxy-server-nameserver'])) {
+    privateDnsServers.push(...config.dns['proxy-server-nameserver']);
+  }
+
+  // 2. 遍历提取节点中的 server 域名
+  const nodeDomains = new Set();
+  const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/;
+  const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+
+  rawProxies.forEach(proxy => {
+    const server = proxy.server;
+    if (server && !ipv4Regex.test(server) && domainRegex.test(server)) {
+      nodeDomains.add(server);
+    }
+  });
+
+  // 3. 将节点域名写入 hosts 直连解析，防止节点连通前 DNS 死锁
+  nodeDomains.forEach(domain => {
+    // 自动为节点域名分配合适的 nameserver-policy 直连解析
+    nameserverPolicy[domain] = nameserverPolicy[domain] || ['119.29.29.29', '223.5.5.5'];
+  });
+
+  if (config.dns) {
+    config.dns['nameserver-policy'] = nameserverPolicy;
+  }
+  config.hosts = hosts;
+}
 
 function main(config) {
   // 1. 全局运行参数与界面配置
@@ -216,7 +296,7 @@ function main(config) {
   const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
   const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
-  // 5. 节点预处理
+  // 5. 节点预处理（含自动补国旗与 IP 版本偏好）
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -228,10 +308,16 @@ function main(config) {
     const type = String(proxy.type || '').toLowerCase();
     if (type === 'direct' || type === 'reject') continue;
 
-    const name = proxy.name || '';
+    let name = proxy.name || '';
     if (ruleOptionsEnable.过滤非地区节点 && globalExcludeRegex.test(name)) continue;
     if (ruleOptionsEnable.过滤低倍率节点 && lowRateFilter.test(name)) continue;
     if (ruleOptionsEnable.过滤高倍率节点 && highRateFilter.test(name)) continue;
+
+    // 自动补齐国旗 Emoji
+    if (ruleOptionsEnable.自动补国旗) {
+      name = appendFlagEmoji(name);
+      proxy.name = name;
+    }
 
     if (ipPref) {
       proxy['ip-version'] = ipPref;
@@ -240,6 +326,11 @@ function main(config) {
   }
   if (processedProxies.length > 0) {
     config.proxies = processedProxies;
+  }
+
+  // 执行私有 DNS 与节点域名 hosts 自动映射
+  if (ruleOptionsEnable.处理私有DNS) {
+    handlePrivateDnsAndHosts(config);
   }
 
   // 6. 构造基础组与地区列表
