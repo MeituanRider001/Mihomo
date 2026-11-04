@@ -108,7 +108,17 @@ Compatible_With_Bettbox.policyGroupOptions = [
 ];
 
 /**
- * 静态分流策略与图标定义表（Bettbox GUI 静态扫描器借此提取开关图标）
+ * 基础策略组静态声明（供 Bettbox 界面扫描图标）
+ */
+const baseGroupConfigs = [
+  { name: 'Manual', icon: `${iconBaseUrl}Proxy.svg` },
+  { name: 'SelectGroup', icon: `${iconBaseUrl}Static.svg` },
+  { name: 'AutoGroup', icon: `${iconBaseUrl}Auto.svg` },
+  { name: 'LoadBalance', icon: `${iconBaseUrl}RoundRobin.svg` }
+];
+
+/**
+ * 业务分流策略静态声明（供 Bettbox 界面扫描图标）
  */
 const serviceConfigs = [
   { name: 'AdBlock', icon: `${iconBaseUrl}AdBlock.svg`, reject: true },
@@ -229,7 +239,7 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53']
   };
 
-  // 4. 正则表达式定义（严格避免 JS 引擎 invalid group 报错）
+  // 4. 正则表达式定义
   const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
   const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
   const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
