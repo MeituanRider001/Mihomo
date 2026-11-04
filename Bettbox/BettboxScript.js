@@ -8,9 +8,9 @@ const Compatible_With_Bettbox = {
   ruleOptionsIcons: {
     // 基础策略组
     'Manual': `${iconBaseUrl}Proxy.svg`,
-    'Select-Group': `${iconBaseUrl}Static.svg`,
-    'Auto-Group': `${iconBaseUrl}Auto.svg`,
-    'Load-Balance': `${iconBaseUrl}RoundRobin.svg`,
+    'SelectGroup': `${iconBaseUrl}Static.svg`,
+    'AutoGroup': `${iconBaseUrl}Auto.svg`,
+    'LoadBalance': `${iconBaseUrl}RoundRobin.svg`,
 
     // 分流服务策略组
     'FCM': `${iconBaseUrl}Fcm.svg`,
@@ -21,14 +21,14 @@ const Compatible_With_Bettbox = {
     'Line': `${iconBaseUrl}Line.svg`,
     'PikPak': `${iconBaseUrl}PikPak.svg`,
     'AdBlock': `${iconBaseUrl}AdBlock.svg`,
-    'Speedtest': `${iconBaseUrl}Speedtest.svg`,
+    'Speedtest': 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Speedtest.png',
     'AI': `${iconBaseUrl}OpenAI.svg`,
     'Spotify': `${iconBaseUrl}Spotify.svg`,
     'YouTube': `${iconBaseUrl}YouTube.svg`,
     'Google': `${iconBaseUrl}Google.svg`,
     'Telegram': `${iconBaseUrl}Telegram.svg`,
     'Twitter': `${iconBaseUrl}Twitter.svg`,
-    'Instagram': `${iconBaseUrl}Instagram.svg`,
+    'Instagram': 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Instagram.png',
     'Emby': `${iconBaseUrl}Emby.svg`,
     'Streaming': 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png',
     'TikTok': `${iconBaseUrl}TikTok.svg`,
@@ -54,10 +54,10 @@ const Compatible_With_Bettbox = {
  */
 var ruleOptionsEnable = {
   // 基础策略组开关
-  'Manual': true,       // 核心聚合策略组
-  'Select-Group': true, // 手动选择所有单节点
-  'Auto-Group': true,   // 自动优选所有单节点
-  'Load-Balance': true, // 负载均衡所有单节点
+  'Manual': true,      // 核心聚合策略组
+  'SelectGroup': true, // 手动选择所有单节点
+  'AutoGroup': true,   // 自动优选所有单节点
+  'LoadBalance': true, // 负载均衡所有单节点
 
   // 分流服务策略配置
   FCM: true,          // Google FCM 服务
@@ -98,13 +98,39 @@ var ruleOptionsEnable = {
  * 策略组选项候选池
  */
 Compatible_With_Bettbox.policyGroupOptions = [
-  'Manual', 'Select-Group', 'Auto-Group', 'Load-Balance',
+  'Manual', 'SelectGroup', 'AutoGroup', 'LoadBalance',
   'HK', 'SG', 'JP', 'US', 'TW', 'Other',
   'HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto',
   'Low-Group', 'High-Group',
   'FCM', 'Microsoft', 'Apple', 'Steam', 'Meta', 'Line', 'PikPak', 'AdBlock',
   'Speedtest', 'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
   'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
+];
+
+/**
+ * 静态分流策略与图标定义表（Bettbox GUI 静态扫描器借此提取开关图标）
+ */
+const serviceConfigs = [
+  { name: 'AdBlock', icon: `${iconBaseUrl}AdBlock.svg`, reject: true },
+  { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },
+  { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },
+  { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },
+  { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },
+  { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
+  { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
+  { name: 'Line', icon: `${iconBaseUrl}Line.svg` },
+  { name: 'Speedtest', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Speedtest.png', direct: true },
+  { name: 'AI', icon: `${iconBaseUrl}OpenAI.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] },
+  { name: 'Telegram', icon: `${iconBaseUrl}Telegram.svg` },
+  { name: 'Google', icon: `${iconBaseUrl}Google.svg` },
+  { name: 'Streaming', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png' },
+  { name: 'YouTube', icon: `${iconBaseUrl}YouTube.svg` },
+  { name: 'Spotify', icon: `${iconBaseUrl}Spotify.svg` },
+  { name: 'Emby', icon: `${iconBaseUrl}Emby.svg` },
+  { name: 'TikTok', icon: `${iconBaseUrl}TikTok.svg` },
+  { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },
+  { name: 'Instagram', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Instagram.png' },
+  { name: 'Final', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png' }
 ];
 
 function main(config) {
@@ -140,7 +166,7 @@ function main(config) {
     asn: "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb"
   };
 
-  // 2. DNS 配置（轻量无冗余，联动 FCM 开关）
+  // 2. DNS 配置
   const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
   const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
   const defaultDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
@@ -203,7 +229,7 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53']
   };
 
-  // 4. 正则表达式定义（去除非 JS 语法的 (?i) 前缀，避免 invalid group 报错）
+  // 4. 正则表达式定义（严格避免 JS 引擎 invalid group 报错）
   const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
   const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
   const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
@@ -224,7 +250,7 @@ function main(config) {
   const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
   const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
-  // 5. 节点预处理：根据开关处理 IP优先 与 倍率/非地区过滤
+  // 5. 节点预处理
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -254,9 +280,9 @@ function main(config) {
   const allProxyNames = (config.proxies || []).map(p => p.name);
   
   const basicFunctionGroups = [];
-  if (ruleOptionsEnable['Select-Group'] !== false) basicFunctionGroups.push('Select-Group');
-  if (ruleOptionsEnable['Auto-Group'] !== false) basicFunctionGroups.push('Auto-Group');
-  if (ruleOptionsEnable['Load-Balance'] !== false) basicFunctionGroups.push('Load-Balance');
+  if (ruleOptionsEnable['SelectGroup'] !== false) basicFunctionGroups.push('SelectGroup');
+  if (ruleOptionsEnable['AutoGroup'] !== false) basicFunctionGroups.push('AutoGroup');
+  if (ruleOptionsEnable['LoadBalance'] !== false) basicFunctionGroups.push('LoadBalance');
 
   const baseRegionList = ['HK', 'SG', 'JP', 'US', 'TW', 'Other'];
   if (ruleOptionsEnable.生成地区自动选择组) {
@@ -268,7 +294,6 @@ function main(config) {
     rateGroupsList.push('Low-Group', 'High-Group');
   }
 
-  // Manual 专属包含列表：国家策略组 -> 手动 -> 自动 -> 负载均衡 -> 倍率组
   const manualGroupProxies = [
     ...baseRegionList,
     ...basicFunctionGroups,
@@ -293,10 +318,10 @@ function main(config) {
     });
   }
 
-  // ② 手动 (Select-Group)
-  if (ruleOptionsEnable['Select-Group'] !== false) {
+  // ② 手动 (SelectGroup)
+  if (ruleOptionsEnable['SelectGroup'] !== false) {
     groups.push({
-      name: 'Select-Group',
+      name: 'SelectGroup',
       type: 'select',
       'include-all': true,
       'exclude-filter': globalExclude,
@@ -304,10 +329,10 @@ function main(config) {
     });
   }
 
-  // ③ 自动 (Auto-Group)
-  if (ruleOptionsEnable['Auto-Group'] !== false) {
+  // ③ 自动 (AutoGroup)
+  if (ruleOptionsEnable['AutoGroup'] !== false) {
     groups.push({
-      name: 'Auto-Group',
+      name: 'AutoGroup',
       type: 'url-test',
       'include-all': true,
       interval: 300,
@@ -318,10 +343,10 @@ function main(config) {
     });
   }
 
-  // ④ 负载均衡 (Load-Balance)
-  if (ruleOptionsEnable['Load-Balance'] !== false) {
+  // ④ 负载均衡 (LoadBalance)
+  if (ruleOptionsEnable['LoadBalance'] !== false) {
     groups.push({
-      name: 'Load-Balance',
+      name: 'LoadBalance',
       type: 'load-balance',
       'include-all': true,
       strategy: 'consistent-hashing',
@@ -341,30 +366,7 @@ function main(config) {
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png'
     });
   } else {
-    const allServices = [
-      { name: 'AdBlock', icon: `${iconBaseUrl}AdBlock.svg`, reject: true },
-      { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },
-      { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },
-      { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },
-      { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },
-      { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
-      { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
-      { name: 'Line', icon: `${iconBaseUrl}Line.svg` },
-      { name: 'Speedtest', icon: `${iconBaseUrl}Speedtest.svg`, direct: true },
-      { name: 'AI', icon: `${iconBaseUrl}OpenAI.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] },
-      { name: 'Telegram', icon: `${iconBaseUrl}Telegram.svg` },
-      { name: 'Google', icon: `${iconBaseUrl}Google.svg` },
-      { name: 'Streaming', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png' },
-      { name: 'YouTube', icon: `${iconBaseUrl}YouTube.svg` },
-      { name: 'Spotify', icon: `${iconBaseUrl}Spotify.svg` },
-      { name: 'Emby', icon: `${iconBaseUrl}Emby.svg` },
-      { name: 'TikTok', icon: `${iconBaseUrl}TikTok.svg` },
-      { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },
-      { name: 'Instagram', icon: `${iconBaseUrl}Instagram.svg` },
-      { name: 'Final', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png' }
-    ];
-
-    allServices.forEach(svc => {
+    serviceConfigs.forEach(svc => {
       if (ruleOptionsEnable[svc.name] === false) return;
 
       let finalProxies = [];
