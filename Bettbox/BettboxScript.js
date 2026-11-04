@@ -41,7 +41,7 @@ const serviceConfigs = [
 ];
 
 /**
- * 自定义配置选项（Bettbox GUI 动态注入）
+ * 自定义配置选项
  */
 var ruleOptionsEnable = {
   // 基础策略组开关
@@ -126,12 +126,10 @@ const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕
 const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
 // ==========================================
-// 2. 自动补国旗
+// 2. 自动补国旗（精准防重）
 // ==========================================
-// 匹配所有标准国旗 Emoji（区域指示符号代理对及旗帜类符号）
 const flagEmojiRegex = /(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD83C\uDFC1\uD83C\uDFF3\uD83C\uDFF4]/;
 
-// 补国旗专用的文字特征库（排除国旗 Emoji 本身，避免自带国旗节点触发自匹配）
 const flagMatchRules = [
   { flag: '🇭🇰', reg: /(?:香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\s*kong)/i },
   { flag: '🇯🇵', reg: /(?:日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)/i },
@@ -142,7 +140,6 @@ const flagMatchRules = [
 
 function autoAppendFlag(name) {
   if (!name) return '';
-  // 若节点自带任何国旗 Emoji，直接跳过
   if (flagEmojiRegex.test(name)) {
     return name;
   }
@@ -155,53 +152,70 @@ function autoAppendFlag(name) {
 }
 
 // ==========================================
-// 3. 私有 DNS 完整处理函数
+// 3. 原版私有 DNS 与节点域名 hosts 自动映射完整实现
 // ==========================================
 function handlePrivateDnsAndHosts(config) {
   if (!config.dns) config.dns = {};
-  config.hosts = config.hosts || {};
+  if (!config.hosts) config.hosts = {};
 
-  const nameserverPolicy = config.dns['nameserver-policy'] || {};
-  let proxyServerDns = config.dns['proxy-server-nameserver'] || [];
+  const dns = config.dns;
+  const hosts = config.hosts;
+  const nameserverPolicy = dns['nameserver-policy'] || {};
+  let proxyServerDns = Array.isArray(dns['proxy-server-nameserver']) ? dns['proxy-server-nameserver'] : [];
 
-  // 提取订阅中的顶层私有 nameserver
+  // (1) 提取订阅原配置中的私有 nameservers
+  const rawDnsList = [];
   if (Array.isArray(config.nameservers)) {
-    config.nameservers.forEach(ns => {
-      if (!proxyServerDns.includes(ns)) {
-        proxyServerDns.push(ns);
-      }
-    });
+    rawDnsList.push(...config.nameservers);
+  }
+  if (config.dns && Array.isArray(config.dns.nameserver)) {
+    rawDnsList.push(...config.dns.nameserver);
   }
 
-  // 提取所有节点域名（排除纯 IP）
-  const rawProxies = config.proxies || [];
-  const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/;
-  const ipRegex = /^(?:\d{1,3}\.){3}\d{1,3}$|^\[?[a-fA-F0-9:]+\]?$/;
-
-  const nodeDomains = new Set();
-  rawProxies.forEach(p => {
-    if (p.server && !ipRegex.test(p.server) && domainRegex.test(p.server)) {
-      nodeDomains.add(p.server);
-    }
-    if (p.sni && !ipRegex.test(p.sni) && domainRegex.test(p.sni)) {
-      nodeDomains.add(p.sni);
-    }
-    if (p['reality-opts'] && p['reality-opts']['server-name']) {
-      const realitySni = p['reality-opts']['server-name'];
-      if (!ipRegex.test(realitySni) && domainRegex.test(realitySni)) {
-        nodeDomains.add(realitySni);
+  // 区分并提取私有自定义 DNS（例如纯 IP、带端口或特定协议的机场私有上游）
+  const ipWithPortRegex = /^(?:https?:\/\/|tls:\/\/)?((?:\d{1,3}\.){3}\d{1,3}|\[?[a-fA-F0-9:]+\]?)(?::\d+)?(?:\/.*)?$/;
+  rawDnsList.forEach(srv => {
+    if (typeof srv === 'string' && srv.trim()) {
+      const match = srv.match(ipWithPortRegex);
+      if (match && !proxyServerDns.includes(srv)) {
+        proxyServerDns.push(srv);
       }
     }
   });
 
-  // 将节点域名绑定到专用直连解析，防止 Fake-IP 循环握手死锁
-  const cleanDns = proxyServerDns.length > 0 ? proxyServerDns : ['223.5.5.5', '119.29.29.29'];
-  nodeDomains.forEach(domain => {
-    nameserverPolicy[domain] = cleanDns;
+  // (2) 提取节点域名与 hosts 映射，防止节点连通前 DNS 死锁
+  const rawProxies = config.proxies || [];
+  const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+$/;
+  const isIpRegex = /^(?:\d{1,3}\.){3}\d{1,3}$|^\[?[a-fA-F0-9:]+\]?$/;
+
+  const nodeDomains = new Set();
+  rawProxies.forEach(proxy => {
+    if (proxy.server && !isIpRegex.test(proxy.server) && domainRegex.test(proxy.server)) {
+      nodeDomains.add(proxy.server);
+    }
+    if (proxy.sni && !isIpRegex.test(proxy.sni) && domainRegex.test(proxy.sni)) {
+      nodeDomains.add(proxy.sni);
+    }
+    if (proxy['reality-opts'] && proxy['reality-opts']['server-name']) {
+      const sni = proxy['reality-opts']['server-name'];
+      if (!isIpRegex.test(sni) && domainRegex.test(sni)) {
+        nodeDomains.add(sni);
+      }
+    }
   });
 
-  config.dns['proxy-server-nameserver'] = proxyServerDns;
-  config.dns['nameserver-policy'] = nameserverPolicy;
+  // (3) 将探测到的节点域名绑定至 nameserver-policy，优先使用 proxy-server-nameserver 直连解析
+  const fallbackDirectDns = ['119.29.29.29', '223.5.5.5'];
+  const resolveTarget = proxyServerDns.length > 0 ? proxyServerDns : fallbackDirectDns;
+
+  nodeDomains.forEach(domain => {
+    if (!nameserverPolicy[domain]) {
+      nameserverPolicy[domain] = resolveTarget;
+    }
+  });
+
+  dns['proxy-server-nameserver'] = proxyServerDns.length > 0 ? proxyServerDns : fallbackDirectDns;
+  dns['nameserver-policy'] = nameserverPolicy;
 }
 
 function main(config) {
