@@ -8,31 +8,65 @@ const Compatible_With_Bettbox = { ruleOptionsEnable: true };
  * true = 启用, false = 禁用
  */
 var ruleOptionsEnable = {
-  // 分流服务开关
-  Speedtest: true,
-  AI: true,
-  Spotify: true,
-  YouTube: true,
-  Google: true,
-  Telegram: true,
-  Twitter: true,
-  Instagram: true,
-  Emby: true,
-  Streaming: true,
-  TikTok: true
+  // 基础策略组开关
+  'Manual': true,       // 核心聚合策略组
+  'Select-Group': true, // 手动选择所有单节点
+  'Auto-Group': true,   // 自动优选所有单节点
+  'Load-Balance': true, // 负载均衡所有单节点
+
+  // 分流服务策略配置
+  FCM: true,          // Google FCM 服务
+  Microsoft: true,    // Microsoft 微软服务
+  Apple: true,        // Apple 苹果服务
+  Steam: true,        // Steam 游戏平台
+  Meta: true,         // Meta 脸书相关
+  Line: true,         // Line 通讯软件
+  PikPak: true,       // PikPak 网盘服务
+  AdBlock: true,      // 广告拦截
+  Speedtest: true,    // Speedtest 测速服务
+  AI: true,           // 国外 AI 服务 (ChatGPT/Claude/Gemini等)
+  Spotify: true,      // Spotify 音乐流媒体
+  YouTube: true,      // YouTube 视频平台
+  Google: true,       // Google 搜索与全家桶服务
+  Telegram: true,     // Telegram 通讯软件
+  Twitter: true,      // Twitter 社交平台
+  Instagram: true,    // Instagram 图片社交
+  Emby: true,         // Emby 媒体服务
+  Streaming: true,    // 国外流媒体平台 (Netflix/Disney+/HBO等)
+  TikTok: true,       // TikTok 海外短视频平台
+
+  // 其他设置（默认值与 Bettbox 界面截图对齐）
+  极简模式: false,
+  生成地区自动选择组: false,
+  隐藏地区手动选择组: false,
+  生成倍率组: false,
+  分流组添加所有节点: false,
+  过滤低倍率节点: false,
+  过滤高倍率节点: false,
+  过滤非地区节点: true,
+  屏蔽国外QUIC: true,
+  代理IPV4优先: true,
+  代理IPV6优先: false
 };
 
 /**
  * 策略组选项候选池
  */
 Compatible_With_Bettbox.policyGroupOptions = [
-  'Manual', 'HK', 'SG', 'JP', 'US', 'TW', 'Other',
+  'Manual', 'Select-Group', 'Auto-Group', 'Load-Balance',
+  'HK', 'SG', 'JP', 'US', 'TW', 'Other',
   'HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto',
+  'Low-Group', 'High-Group',
+  'FCM', 'Microsoft', 'Apple', 'Steam', 'Meta', 'Line', 'PikPak', 'AdBlock',
   'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
   'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
 ];
 
 function main(config) {
+  // 图标与规则集 URL 公共前缀
+  const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/svg/';
+  const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
+
   // 1. 全局运行参数与界面配置
   config['mixed-port'] = 7890;
   config['allow-lan'] = true;
@@ -63,11 +97,16 @@ function main(config) {
     asn: "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb"
   };
 
-  // 2. DNS 配置
+  // 2. DNS 配置（轻量无冗余，联动 FCM 开关）
   const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
   const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
   const defaultDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
   const proxyServerDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
+
+  const fakeIpFilters = ['geosite:private', 'geosite:cn'];
+  if (ruleOptionsEnable['FCM']) {
+    fakeIpFilters.push('geosite:googlefcm');
+  }
 
   config['dns'] = {
     enable: true,
@@ -78,7 +117,7 @@ function main(config) {
     'enhanced-mode': 'fake-ip',
     'fake-ip-range': '198.18.0.1/15',
     'fake-ip-range6': '2001:2::1/48',
-    'fake-ip-filter': ['geosite:private', 'geosite:cn', 'geosite:googlefcm'],
+    'fake-ip-filter': fakeIpFilters,
     'default-nameserver': defaultDNS,
     'proxy-server-nameserver': proxyServerDNS,
     nameserver: foreignDNS,
@@ -121,7 +160,7 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53']
   };
 
-  // 4. 正则表达式过滤器
+  // 4. 正则表达式定义
   const globalExclude = '(?i)(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
   const hkFilter = '(?i)(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
   const jpFilter = '(?i)(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
@@ -129,238 +168,251 @@ function main(config) {
   const sgFilter = '(?i)(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
   const twFilter = '(?i)(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
   const excludeMainlandRegions = '(?i)(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong|🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan|🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states|🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore|🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
+  
+  const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
+  const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
   const otherExclude = `${excludeMainlandRegions}|${globalExclude}`;
 
-  const fullProxies = [
-    'Manual',
-    'HK', 'SG', 'JP', 'US', 'TW', 'Other',
-    'HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto'
+  // 5. 节点预处理：根据开关处理 IP优先 与 倍率/非地区过滤
+  let ipPref = null;
+  if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
+  if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
+
+  const rawProxies = config.proxies || [];
+  const processedProxies = [];
+  const globalExcludeRegex = new RegExp(globalExclude, 'i');
+
+  for (const proxy of rawProxies) {
+    const type = String(proxy.type || '').toLowerCase();
+    if (type === 'direct' || type === 'reject') continue;
+
+    const name = proxy.name || '';
+    if (ruleOptionsEnable.过滤非地区节点 && globalExcludeRegex.test(name)) continue;
+    if (ruleOptionsEnable.过滤低倍率节点 && lowRateFilter.test(name)) continue;
+    if (ruleOptionsEnable.过滤高倍率节点 && highRateFilter.test(name)) continue;
+
+    if (ipPref) {
+      proxy['ip-version'] = ipPref;
+    }
+    processedProxies.push(proxy);
+  }
+  if (processedProxies.length > 0) {
+    config.proxies = processedProxies;
+  }
+
+  // 6. 构造基础组与地区列表
+  const allProxyNames = (config.proxies || []).map(p => p.name);
+  
+  const basicFunctionGroups = [];
+  if (ruleOptionsEnable['Select-Group'] !== false) basicFunctionGroups.push('Select-Group');
+  if (ruleOptionsEnable['Auto-Group'] !== false) basicFunctionGroups.push('Auto-Group');
+  if (ruleOptionsEnable['Load-Balance'] !== false) basicFunctionGroups.push('Load-Balance');
+
+  const baseRegionList = ['HK', 'SG', 'JP', 'US', 'TW', 'Other'];
+  if (ruleOptionsEnable.生成地区自动选择组) {
+    baseRegionList.push('HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto');
+  }
+
+  const rateGroupsList = [];
+  if (ruleOptionsEnable.生成倍率组) {
+    rateGroupsList.push('Low-Group', 'High-Group');
+  }
+
+  // Manual 专属包含列表：国家策略组 -> 手动 -> 自动 -> 负载均衡 -> 倍率组
+  const manualGroupProxies = [
+    ...baseRegionList,
+    ...basicFunctionGroups,
+    ...rateGroupsList
   ];
 
-  // 5. 策略组构建
-  config['proxy-groups'] = [
-    {
+  const commonProxies = ['Manual', ...basicFunctionGroups, ...baseRegionList, ...rateGroupsList];
+  const serviceProxies = ruleOptionsEnable.分流组添加所有节点
+    ? [...commonProxies, ...allProxyNames]
+    : commonProxies;
+
+  // 7. 策略组构建（严格按指定顺序组装）
+  const groups = [];
+
+  // ① Manual
+  if (ruleOptionsEnable['Manual'] !== false) {
+    groups.push({
       name: 'Manual',
       type: 'select',
+      proxies: manualGroupProxies,
+      icon: `${iconBaseUrl}Proxy.svg`
+    });
+  }
+
+  // ② 手动 (Select-Group)
+  if (ruleOptionsEnable['Select-Group'] !== false) {
+    groups.push({
+      name: 'Select-Group',
+      type: 'select',
       'include-all': true,
       'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Proxy.png'
-    },
-    {
-      name: 'Telegram',
-      type: 'select',
+      icon: `${iconBaseUrl}Static.svg`
+    });
+  }
+
+  // ③ 自动 (Auto-Group)
+  if (ruleOptionsEnable['Auto-Group'] !== false) {
+    groups.push({
+      name: 'Auto-Group',
+      type: 'url-test',
+      'include-all': true,
+      interval: 300,
+      tolerance: 50,
+      url: 'http://1.1.1.1/generate_204',
+      'exclude-filter': globalExclude,
+      icon: `${iconBaseUrl}Auto.svg`
+    });
+  }
+
+  // ④ 负载均衡 (Load-Balance)
+  if (ruleOptionsEnable['Load-Balance'] !== false) {
+    groups.push({
+      name: 'Load-Balance',
+      type: 'load-balance',
+      'include-all': true,
+      strategy: 'consistent-hashing',
       interval: 300,
       url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png'
-    },
-    {
-      name: 'AI',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other', 'US-Auto', 'JP-Auto', 'SG-Auto', 'TW-Auto', 'HK-Auto'],
-      icon: 'https://raw.githubusercontent.com/Orz-3/mini/master/Color/OpenAI.png'
-    },
-    {
-      name: 'Google',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Google_Search.png'
-    },
-    {
-      name: 'Streaming',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png'
-    },
-    {
-      name: 'YouTube',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/youtube.png'
-    },
-    {
-      name: 'Spotify',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Spotify.png'
-    },
-    {
-      name: 'Emby',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/emby.png'
-    },
-    {
-      name: 'TikTok',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/fmz200/wool_scripts/main/icons/apps/TikTok_01.png'
-    },
-    {
-      name: 'Twitter',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/twitter.png'
-    },
-    {
-      name: 'Instagram',
-      type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Instagram.png'
-    },
-    {
+      'exclude-filter': globalExclude,
+      icon: `${iconBaseUrl}RoundRobin.svg`
+    });
+  }
+
+  // ⑤ 分流策略组
+  if (ruleOptionsEnable.极简模式) {
+    groups.push({
       name: 'Final',
       type: 'select',
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: fullProxies,
+      proxies: ['Manual', ...basicFunctionGroups, 'DIRECT'],
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png'
-    },
+    });
+  } else {
+    const allServices = [
+      { name: 'AdBlock', icon: `${iconBaseUrl}AdBlock.svg`, reject: true },
+      { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },
+      { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },
+      { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },
+      { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },
+      { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
+      { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
+      { name: 'Line', icon: `${iconBaseUrl}Line.svg` },
+      { name: 'AI', icon: `${iconBaseUrl}OpenAI.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] },
+      { name: 'Telegram', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png' },
+      { name: 'Google', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Google_Search.png' },
+      { name: 'Streaming', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png' },
+      { name: 'YouTube', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/youtube.png' },
+      { name: 'Spotify', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Spotify.png' },
+      { name: 'Emby', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/emby.png' },
+      { name: 'TikTok', icon: 'https://raw.githubusercontent.com/fmz200/wool_scripts/main/icons/apps/TikTok_01.png' },
+      { name: 'Twitter', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/color/twitter.png' },
+      { name: 'Instagram', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Instagram.png' },
+      { name: 'Final', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png' }
+    ];
 
-    // 手动国家筛选组
-    {
-      name: 'HK',
-      type: 'select',
-      'include-all': true,
-      filter: hkFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png'
-    },
-    {
-      name: 'SG',
-      type: 'select',
-      'include-all': true,
-      filter: sgFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png'
-    },
-    {
-      name: 'JP',
-      type: 'select',
-      'include-all': true,
-      filter: jpFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png'
-    },
-    {
-      name: 'US',
-      type: 'select',
-      'include-all': true,
-      filter: usFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png'
-    },
-    {
-      name: 'TW',
-      type: 'select',
-      'include-all': true,
-      filter: twFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png'
-    },
-    {
-      name: 'Other',
-      type: 'select',
-      'include-all': true,
-      'exclude-filter': otherExclude,
-      icon: 'https://raw.githubusercontent.com/lige47/QuanX-icon-rule/main/icon/05icon/quanqiu(1).png'
-    },
+    allServices.forEach(svc => {
+      if (ruleOptionsEnable[svc.name] === false) return;
 
-    // 国家自动优选组
-    {
-      name: 'HK-Auto',
-      type: 'url-test',
-      'include-all': true,
-      interval: 1800,
-      tolerance: 20,
-      hidden: true,
-      url: 'http://1.1.1.1/generate_204',
-      filter: hkFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png'
-    },
-    {
-      name: 'SG-Auto',
-      type: 'url-test',
-      'include-all': true,
-      interval: 1800,
-      tolerance: 20,
-      hidden: true,
-      url: 'http://1.1.1.1/generate_204',
-      filter: sgFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png'
-    },
-    {
-      name: 'JP-Auto',
-      type: 'url-test',
-      'include-all': true,
-      interval: 1800,
-      tolerance: 20,
-      hidden: true,
-      url: 'http://1.1.1.1/generate_204',
-      filter: jpFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png'
-    },
-    {
-      name: 'US-Auto',
-      type: 'url-test',
-      'include-all': true,
-      interval: 1800,
-      tolerance: 20,
-      hidden: true,
-      url: 'http://1.1.1.1/generate_204',
-      filter: usFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png'
-    },
-    {
-      name: 'TW-Auto',
-      type: 'url-test',
-      'include-all': true,
-      interval: 1800,
-      tolerance: 20,
-      hidden: true,
-      url: 'http://1.1.1.1/generate_204',
-      filter: twFilter,
-      'exclude-filter': globalExclude,
-      icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png'
+      let finalProxies = [];
+      if (svc.reject) {
+        finalProxies = ['REJECT', 'REJECT-DROP', 'PASS'];
+      } else if (svc.proxies) {
+        finalProxies = [...svc.proxies, ...serviceProxies.filter(p => !svc.proxies.includes(p))];
+      } else {
+        finalProxies = svc.direct ? [...serviceProxies, 'DIRECT'] : [...serviceProxies];
+      }
+
+      groups.push({
+        name: svc.name,
+        type: 'select',
+        interval: 300,
+        url: 'http://1.1.1.1/generate_204',
+        'max-failed-times': 5,
+        proxies: finalProxies,
+        icon: svc.icon
+      });
+    });
+  }
+
+  // ⑥ 国家策略组（含倍率与地区优选组）
+  if (!ruleOptionsEnable.极简模式) {
+    const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
+    const regionSelectConfigs = [
+      { name: 'HK', filter: hkFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png' },
+      { name: 'SG', filter: sgFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png' },
+      { name: 'JP', filter: jpFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png' },
+      { name: 'US', filter: usFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png' },
+      { name: 'TW', filter: twFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png' },
+      { name: 'Other', 'exclude-filter': otherExclude, icon: 'https://raw.githubusercontent.com/lige47/QuanX-icon-rule/main/icon/05icon/quanqiu(1).png' }
+    ];
+
+    regionSelectConfigs.forEach(r => {
+      groups.push({
+        name: r.name,
+        type: 'select',
+        'include-all': true,
+        ...(r.filter && { filter: r.filter }),
+        ...(r['exclude-filter'] && { 'exclude-filter': r['exclude-filter'] }),
+        hidden: hideManual,
+        icon: r.icon
+      });
+    });
+
+    if (ruleOptionsEnable.生成地区自动选择组) {
+      const regionAutoConfigs = [
+        { name: 'HK-Auto', filter: hkFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png' },
+        { name: 'SG-Auto', filter: sgFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png' },
+        { name: 'JP-Auto', filter: jpFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png' },
+        { name: 'US-Auto', filter: usFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png' },
+        { name: 'TW-Auto', filter: twFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png' }
+      ];
+
+      regionAutoConfigs.forEach(r => {
+        groups.push({
+          name: r.name,
+          type: 'url-test',
+          'include-all': true,
+          interval: 1800,
+          tolerance: 20,
+          hidden: true,
+          url: 'http://1.1.1.1/generate_204',
+          filter: r.filter,
+          'exclude-filter': globalExclude,
+          icon: r.icon
+        });
+      });
     }
-  ];
 
-  // 6. 规则集定义
+    if (ruleOptionsEnable.生成倍率组) {
+      groups.push({
+        name: 'Low-Group',
+        type: 'select',
+        'include-all': true,
+        filter: lowRateFilter.source,
+        'exclude-filter': globalExclude,
+        icon: `${iconBaseUrl}Available.svg`
+      });
+      groups.push({
+        name: 'High-Group',
+        type: 'select',
+        'include-all': true,
+        filter: highRateFilter.source,
+        'exclude-filter': globalExclude,
+        icon: `${iconBaseUrl}Airport.svg`
+      });
+    }
+  }
+
+  config['proxy-groups'] = groups;
+
+  // 8. 规则集定义
   const cProvider = { type: 'http', behavior: 'classical', format: 'text', interval: 86400 };
+  const domainMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'domain' };
+  const ipMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'ipcidr' };
 
   config['rule-providers'] = {
     Direct: { ...cProvider, url: 'https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Direct.list' },
@@ -380,37 +432,76 @@ function main(config) {
     PrimeVideo: { ...cProvider, url: 'https://raw.githubusercontent.com/Repcz/Tool/refs/heads/X/mihomo/Rules/PrimeVideo.list' },
     HBO: { ...cProvider, url: 'https://raw.githubusercontent.com/Repcz/Tool/refs/heads/X/mihomo/Rules/HBO.list' },
     TikTok: { ...cProvider, url: 'https://raw.githubusercontent.com/Repcz/Tool/refs/heads/X/mihomo/Rules/TikTok.list' },
-    Speedtest: { ...cProvider, url: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/Speedtest/Speedtest.list' }
+    Speedtest: { ...cProvider, url: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/Speedtest/Speedtest.list' },
+
+    'category-ads': { ...domainMrs, url: `${ruleSetBaseUrl}geosite/category-ads.mrs`, path: './ruleset/category-ads.mrs' },
+    googlefcm: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/googlefcm.mrs`, path: './ruleset/googlefcm.mrs' },
+    microsoft: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/microsoft.mrs`, path: './ruleset/microsoft.mrs' },
+    microsoft_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/microsoft.mrs`, path: './ruleset/microsoft_ip.mrs' },
+    apple: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/apple.mrs`, path: './ruleset/apple.mrs' },
+    apple_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/apple.mrs`, path: './ruleset/apple_ip.mrs' },
+    steam: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/steam.mrs`, path: './ruleset/steam.mrs' },
+    steam_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/steam.mrs`, path: './ruleset/steam_ip.mrs' },
+    meta: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/meta.mrs`, path: './ruleset/meta.mrs' },
+    facebook_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/facebook.mrs`, path: './ruleset/facebook_ip.mrs' },
+    line: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/line.mrs`, path: './ruleset/line.mrs' },
+    pikpak: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/pikpak.mrs`, path: './ruleset/pikpak.mrs' }
   };
 
-  // 7. 分流规则
+  // 9. 分流规则构建
   const rules = [
     'RULE-SET,Lan,DIRECT',
     'RULE-SET,Direct,DIRECT',
     'RULE-SET,Reject,REJECT'
   ];
 
-  if (ruleOptionsEnable.Speedtest) rules.push('RULE-SET,Speedtest,Final');
-  if (ruleOptionsEnable.AI) rules.push('RULE-SET,AI,AI');
-  if (ruleOptionsEnable.Spotify) rules.push('RULE-SET,Spotify,Spotify');
-  if (ruleOptionsEnable.YouTube) rules.push('RULE-SET,YouTube,YouTube');
-  if (ruleOptionsEnable.Google) rules.push('RULE-SET,Google,Google');
-  if (ruleOptionsEnable.Telegram) rules.push('RULE-SET,Telegram,Telegram');
-  if (ruleOptionsEnable.Twitter) rules.push('RULE-SET,Twitter,Twitter');
-  if (ruleOptionsEnable.Instagram) rules.push('RULE-SET,Instagram,Instagram');
-  if (ruleOptionsEnable.Emby) rules.push('RULE-SET,Emby,Emby');
-
-  if (ruleOptionsEnable.Streaming) {
-    rules.push(
-      'RULE-SET,Bahamut,Streaming',
-      'RULE-SET,Netflix,Streaming',
-      'RULE-SET,Disney,Streaming',
-      'RULE-SET,PrimeVideo,Streaming',
-      'RULE-SET,HBO,Streaming'
-    );
+  if (ruleOptionsEnable.屏蔽国外QUIC) {
+    rules.push('AND,((NETWORK,UDP),(DST-PORT,443),(GEOIP,CN,DIRECT,REVERSE)),REJECT');
   }
 
-  if (ruleOptionsEnable.TikTok) rules.push('RULE-SET,TikTok,TikTok');
+  if (!ruleOptionsEnable.极简模式 && ruleOptionsEnable.AdBlock) {
+    rules.push('RULE-SET,category-ads,AdBlock');
+  }
+
+  if (!ruleOptionsEnable.极简模式) {
+    if (ruleOptionsEnable.FCM) rules.push('RULE-SET,googlefcm,FCM');
+    if (ruleOptionsEnable.Microsoft) {
+      rules.push('RULE-SET,microsoft,Microsoft', 'RULE-SET,microsoft_ip,Microsoft');
+    }
+    if (ruleOptionsEnable.Apple) {
+      rules.push('RULE-SET,apple,Apple', 'RULE-SET,apple_ip,Apple');
+    }
+    if (ruleOptionsEnable.Steam) {
+      rules.push('RULE-SET,steam,Steam', 'RULE-SET,steam_ip,Steam');
+    }
+    if (ruleOptionsEnable.Meta) {
+      rules.push('RULE-SET,meta,Meta', 'RULE-SET,facebook_ip,Meta');
+    }
+    if (ruleOptionsEnable.Line) rules.push('RULE-SET,line,Line');
+    if (ruleOptionsEnable.PikPak) rules.push('RULE-SET,pikpak,PikPak');
+
+    if (ruleOptionsEnable.Speedtest) rules.push('RULE-SET,Speedtest,Final');
+    if (ruleOptionsEnable.AI) rules.push('RULE-SET,AI,AI');
+    if (ruleOptionsEnable.Spotify) rules.push('RULE-SET,Spotify,Spotify');
+    if (ruleOptionsEnable.YouTube) rules.push('RULE-SET,YouTube,YouTube');
+    if (ruleOptionsEnable.Google) rules.push('RULE-SET,Google,Google');
+    if (ruleOptionsEnable.Telegram) rules.push('RULE-SET,Telegram,Telegram');
+    if (ruleOptionsEnable.Twitter) rules.push('RULE-SET,Twitter,Twitter');
+    if (ruleOptionsEnable.Instagram) rules.push('RULE-SET,Instagram,Instagram');
+    if (ruleOptionsEnable.Emby) rules.push('RULE-SET,Emby,Emby');
+
+    if (ruleOptionsEnable.Streaming) {
+      rules.push(
+        'RULE-SET,Bahamut,Streaming',
+        'RULE-SET,Netflix,Streaming',
+        'RULE-SET,Disney,Streaming',
+        'RULE-SET,PrimeVideo,Streaming',
+        'RULE-SET,HBO,Streaming'
+      );
+    }
+
+    if (ruleOptionsEnable.TikTok) rules.push('RULE-SET,TikTok,TikTok');
+  }
 
   rules.push(
     'DOMAIN-SUFFIX,nano.cr18.eu.org,SG',
