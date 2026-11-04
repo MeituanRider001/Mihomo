@@ -102,7 +102,7 @@ Compatible_With_Bettbox.policyGroupOptions = [
 ];
 
 // ==========================================
-// 1. 原版地区正则（含单词边界隔离）
+// AIsouler 原版：地区正则定义
 // ==========================================
 const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
 const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
@@ -126,29 +126,46 @@ const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕
 const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
 // ==========================================
-// 2. 自动补国旗（精准判定已有 Emoji，避免双国旗）
+// AIsouler 原版：自动补国旗逻辑
 // ==========================================
-const flagDetectionRegex = /(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD83C\uDFC1\uD83C\uDFF3\uD83C\uDFF4]|[\u2690\u2691]/;
-
-const flagMatchRules = [
-  { flag: '🇭🇰', reg: new RegExp(hkPattern, 'i') },
-  { flag: '🇯🇵', reg: new RegExp(jpPattern, 'i') },
-  { flag: '🇺🇸', reg: new RegExp(usPattern, 'i') },
-  { flag: '🇸🇬', reg: new RegExp(sgPattern, 'i') },
-  { flag: '🇹🇼', reg: new RegExp(twPattern, 'i') }
-];
-
 function autoAppendFlag(name) {
   if (!name) return '';
-  if (flagDetectionRegex.test(name)) {
-    return name; // 原生已有国旗，不重复加
+  // 原版国旗 Emoji 检测：如果已经存在国旗，直接返回
+  if (/[\uD83C][\uDDE6-\uDDFF]{2}/.test(name)) {
+    return name;
   }
-  for (const item of flagMatchRules) {
-    if (item.reg.test(name)) {
-      return `${item.flag} ${name}`;
-    }
-  }
+  if (new RegExp(hkPattern, 'i').test(name)) return `🇭🇰 ${name}`;
+  if (new RegExp(jpPattern, 'i').test(name)) return `🇯🇵 ${name}`;
+  if (new RegExp(usPattern, 'i').test(name)) return `🇺🇸 ${name}`;
+  if (new RegExp(sgPattern, 'i').test(name)) return `🇸🇬 ${name}`;
+  if (new RegExp(twPattern, 'i').test(name)) return `🇹🇼 ${name}`;
   return name;
+}
+
+// ==========================================
+// AIsouler 原版：私有 DNS 自动处理逻辑
+// ==========================================
+function handlePrivateDns(config) {
+  const originalDns = config['dns'] || {};
+  let proxyDns = [];
+
+  // 1. 抓取订阅配置里的私有 nameservers
+  if (Array.isArray(config['nameservers']) && config['nameservers'].length > 0) {
+    proxyDns.push(...config['nameservers']);
+  }
+  if (Array.isArray(originalDns['proxy-server-nameserver']) && originalDns['proxy-server-nameserver'].length > 0) {
+    proxyDns.push(...originalDns['proxy-server-nameserver']);
+  }
+
+  // 2. 默认兜底 DNS
+  const fallbackDns = ['114.114.114.114', '223.5.5.5', 'https://doh.pub/dns-query'];
+  const finalProxyServerDns = proxyDns.length > 0 ? [...new Set(proxyDns)] : fallbackDns;
+
+  return {
+    proxyServerDns: finalProxyServerDns,
+    originalPolicy: originalDns['nameserver-policy'] || {},
+    originalHosts: config['hosts'] || {}
+  };
 }
 
 function main(config) {
@@ -182,7 +199,7 @@ function main(config) {
     asn: "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb"
   };
 
-  // 2. 节点预处理（补国旗与倍率/垃圾过滤）
+  // 2. 节点预处理
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -213,70 +230,23 @@ function main(config) {
     config.proxies = processedProxies;
   }
 
-  // 3. DNS 与 Hosts 继承提取（彻底解决 Timeout）
-  const originalDns = config['dns'] || {};
-  const originalHosts = config['hosts'] || {};
+  // 3. DNS 与 Hosts（原版继承合并机制）
+  const dnsInfo = handlePrivateDns(config);
 
-  // ① 基础 Hosts：预解析 DoH 域名，防止 bootstrap 死锁
-  const baseHosts = {
-    'doh.pub': ['1.12.12.12', '120.53.53.53'],
-    'dns.alidns.com': ['223.5.5.5', '223.6.6.6'],
-    'cloudflare-dns.com': ['1.1.1.1', '1.0.0.1'],
-    'dns.google': ['8.8.8.8', '8.8.4.4'],
-    'services.googleapis.cn': 'services.googleapis.com',
-    '+.mcdn.bilivideo.com': ['0.0.0.0'],
-    '+.mcdn.bilivideo.cn': ['0.0.0.0'],
-    '+.edge.mountaintoys.cn': ['0.0.0.0'],
-    '+.h2.smtcdns.net': ['0.0.0.0']
-  };
-
-  // 机场原订阅自带的 hosts 拥有最高优先级（保留节点域名到 IP 的硬映射）
-  config['hosts'] = Object.assign({}, baseHosts, originalHosts);
-
-  // ② 提取原订阅私有 DNS（置顶使用，并保留国内快速公共 DNS 作为兜底）
-  let airportPrivateDNS = [];
-  if (ruleOptionsEnable.处理私有DNS) {
-    if (Array.isArray(config['nameservers'])) {
-      airportPrivateDNS.push(...config['nameservers']);
-    }
-    if (Array.isArray(originalDns['proxy-server-nameserver'])) {
-      airportPrivateDNS.push(...originalDns['proxy-server-nameserver']);
-    }
-  }
-
-  // 过滤并清理掉可能误写的 #DIRECT 后缀
-  const cleanPrivateDNS = airportPrivateDNS
-    .filter(d => typeof d === 'string' && d.trim().length > 0)
-    .map(d => d.replace(/#.*$/, '').trim());
-
-  // proxy-server-nameserver 用于解析节点域名，不得带 #DIRECT
-  const proxyServerDNS = [
-    ...new Set([
-      ...cleanPrivateDNS,
-      'https://doh.pub/dns-query',
-      'https://dns.alidns.com/dns-query',
-      '223.5.5.5',
-      '119.29.29.29'
-    ])
-  ];
-
-  // default-nameserver 为 bootstrap DNS，严格只能使用纯 IP，严禁带策略后缀
-  const defaultDNS = ['223.5.5.5', '119.29.29.29', '114.114.114.114'];
   const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
   const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
+  const defaultDNS = ['114.114.114.114', '223.5.5.5'];
 
   const fakeIpFilters = ['geosite:private', 'geosite:cn'];
   if (ruleOptionsEnable['FCM']) {
     fakeIpFilters.push('geosite:googlefcm');
   }
 
-  // 继承机场原有的 nameserver-policy（如内网域名分流解析）
   const defaultPolicy = {
     'geosite:private': 'system',
     'geosite:category-entertainment-cn,douyin': ['system', '180.184.1.1', '180.184.2.2'],
     'geosite:cn': chinaDNS
   };
-  const nameserverPolicy = Object.assign({}, defaultPolicy, originalDns['nameserver-policy'] || {});
 
   config['dns'] = {
     enable: true,
@@ -289,12 +259,23 @@ function main(config) {
     'fake-ip-range6': '2001:2::1/48',
     'fake-ip-filter': fakeIpFilters,
     'default-nameserver': defaultDNS,
-    'proxy-server-nameserver': proxyServerDNS,
+    'proxy-server-nameserver': ruleOptionsEnable.处理私有DNS ? dnsInfo.proxyServerDns : ['114.114.114.114', '223.5.5.5'],
     nameserver: foreignDNS,
-    'nameserver-policy': nameserverPolicy,
+    'nameserver-policy': Object.assign({}, defaultPolicy, dnsInfo.originalPolicy),
     'direct-nameserver': chinaDNS,
     'direct-nameserver-follow-policy': true
   };
+
+  config['hosts'] = Object.assign({}, dnsInfo.originalHosts, {
+    'doh.pub': ['1.12.12.12', '120.53.53.53'],
+    'cloudflare-dns.com': ['1.1.1.1', '1.0.0.1'],
+    'dns.google': ['8.8.8.8', '8.8.4.4'],
+    'services.googleapis.cn': 'services.googleapis.com',
+    '+.mcdn.bilivideo.com': ['0.0.0.0'],
+    '+.mcdn.bilivideo.cn': ['0.0.0.0'],
+    '+.edge.mountaintoys.cn': ['0.0.0.0'],
+    '+.h2.smtcdns.net': ['0.0.0.0']
+  });
 
   config['ntp'] = {
     enable: true,
