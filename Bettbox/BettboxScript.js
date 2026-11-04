@@ -1,41 +1,36 @@
 // ==========================================
-// Bettbox GUI 可视化选项声明
+// Bettbox GUI 可视化选项
 // ==========================================
-const Compatible_With_Bettbox = {
-  ruleOptionsEnable: {
-    // 基础代理与自动优选
-    'Manual': true,
-    'HK': true,
-    'SG': true,
-    'JP': true,
-    'US': true,
-    'TW': true,
-    'Other': true,
-    'HK-Auto': true,
-    'SG-Auto': true,
-    'JP-Auto': true,
-    'US-Auto': true,
-    'TW-Auto': true,
-    // 分流服务策略组
-    'AI': true,
-    'Telegram': true,
-    'Google': true,
-    'YouTube': true,
-    'Streaming': true,
-    'Spotify': true,
-    'Emby': true,
-    'TikTok': true,
-    'Twitter': true,
-    'Instagram': true,
-    'Final': true
-  },
-  policyGroupOptions: [
-    'Manual', 'HK', 'SG', 'JP', 'US', 'TW', 'Other',
-    'HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto',
-    'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
-    'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
-  ]
+const Compatible_With_Bettbox = { ruleOptionsEnable: true };
+
+/**
+ * 自定义配置选项（Bettbox GUI 会动态注入并覆写此变量）
+ * true = 启用, false = 禁用
+ */
+var ruleOptionsEnable = {
+  // 分流服务开关
+  Speedtest: true,
+  AI: true,
+  Spotify: true,
+  YouTube: true,
+  Google: true,
+  Telegram: true,
+  Twitter: true,
+  Instagram: true,
+  Emby: true,
+  Streaming: true,
+  TikTok: true
 };
+
+/**
+ * 策略组选项候选池
+ */
+Compatible_With_Bettbox.policyGroupOptions = [
+  'Manual', 'HK', 'SG', 'JP', 'US', 'TW', 'Other',
+  'HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto',
+  'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
+  'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
+];
 
 function main(config) {
   // 1. 全局运行参数与界面配置
@@ -149,10 +144,7 @@ function main(config) {
       name: 'Manual',
       type: 'select',
       'include-all': true,
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
-      proxies: ['HK', 'SG', 'JP', 'US', 'TW', 'Other', 'HK-Auto', 'SG-Auto', 'JP-Auto', 'US-Auto', 'TW-Auto'],
+      'exclude-filter': globalExclude,
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Proxy.png'
     },
     {
@@ -255,14 +247,11 @@ function main(config) {
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png'
     },
 
-    // 手动单选组
+    // 手动国家筛选组
     {
       name: 'HK',
       type: 'select',
       'include-all': true,
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
       filter: hkFilter,
       'exclude-filter': globalExclude,
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png'
@@ -271,9 +260,6 @@ function main(config) {
       name: 'SG',
       type: 'select',
       'include-all': true,
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
       filter: sgFilter,
       'exclude-filter': globalExclude,
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png'
@@ -282,9 +268,6 @@ function main(config) {
       name: 'JP',
       type: 'select',
       'include-all': true,
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
       filter: jpFilter,
       'exclude-filter': globalExclude,
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png'
@@ -293,9 +276,6 @@ function main(config) {
       name: 'US',
       type: 'select',
       'include-all': true,
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
       filter: usFilter,
       'exclude-filter': globalExclude,
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png'
@@ -304,9 +284,6 @@ function main(config) {
       name: 'TW',
       type: 'select',
       'include-all': true,
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
       filter: twFilter,
       'exclude-filter': globalExclude,
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png'
@@ -315,20 +292,18 @@ function main(config) {
       name: 'Other',
       type: 'select',
       'include-all': true,
-      interval: 300,
-      url: 'http://1.1.1.1/generate_204',
-      'max-failed-times': 5,
       'exclude-filter': otherExclude,
       icon: 'https://raw.githubusercontent.com/lige47/QuanX-icon-rule/main/icon/05icon/quanqiu(1).png'
     },
 
-    // 5 个国家自动优选组
+    // 国家自动优选组
     {
       name: 'HK-Auto',
       type: 'url-test',
       'include-all': true,
       interval: 1800,
       tolerance: 20,
+      hidden: true,
       url: 'http://1.1.1.1/generate_204',
       filter: hkFilter,
       'exclude-filter': globalExclude,
@@ -340,6 +315,7 @@ function main(config) {
       'include-all': true,
       interval: 1800,
       tolerance: 20,
+      hidden: true,
       url: 'http://1.1.1.1/generate_204',
       filter: sgFilter,
       'exclude-filter': globalExclude,
@@ -351,6 +327,7 @@ function main(config) {
       'include-all': true,
       interval: 1800,
       tolerance: 20,
+      hidden: true,
       url: 'http://1.1.1.1/generate_204',
       filter: jpFilter,
       'exclude-filter': globalExclude,
@@ -362,6 +339,7 @@ function main(config) {
       'include-all': true,
       interval: 1800,
       tolerance: 20,
+      hidden: true,
       url: 'http://1.1.1.1/generate_204',
       filter: usFilter,
       'exclude-filter': globalExclude,
@@ -373,6 +351,7 @@ function main(config) {
       'include-all': true,
       interval: 1800,
       tolerance: 20,
+      hidden: true,
       url: 'http://1.1.1.1/generate_204',
       filter: twFilter,
       'exclude-filter': globalExclude,
@@ -405,29 +384,41 @@ function main(config) {
   };
 
   // 7. 分流规则
-  config['rules'] = [
+  const rules = [
     'RULE-SET,Lan,DIRECT',
     'RULE-SET,Direct,DIRECT',
-    'RULE-SET,Reject,REJECT',
-    'RULE-SET,Speedtest,Final',
-    'RULE-SET,AI,AI',
-    'RULE-SET,Spotify,Spotify',
-    'RULE-SET,YouTube,YouTube',
-    'RULE-SET,Google,Google',
-    'RULE-SET,Telegram,Telegram',
-    'RULE-SET,Twitter,Twitter',
-    'RULE-SET,Instagram,Instagram',
-    'RULE-SET,Emby,Emby',
-    'RULE-SET,Bahamut,Streaming',
-    'RULE-SET,Netflix,Streaming',
-    'RULE-SET,Disney,Streaming',
-    'RULE-SET,PrimeVideo,Streaming',
-    'RULE-SET,HBO,Streaming',
-    'RULE-SET,TikTok,TikTok',
+    'RULE-SET,Reject,REJECT'
+  ];
+
+  if (ruleOptionsEnable.Speedtest) rules.push('RULE-SET,Speedtest,Final');
+  if (ruleOptionsEnable.AI) rules.push('RULE-SET,AI,AI');
+  if (ruleOptionsEnable.Spotify) rules.push('RULE-SET,Spotify,Spotify');
+  if (ruleOptionsEnable.YouTube) rules.push('RULE-SET,YouTube,YouTube');
+  if (ruleOptionsEnable.Google) rules.push('RULE-SET,Google,Google');
+  if (ruleOptionsEnable.Telegram) rules.push('RULE-SET,Telegram,Telegram');
+  if (ruleOptionsEnable.Twitter) rules.push('RULE-SET,Twitter,Twitter');
+  if (ruleOptionsEnable.Instagram) rules.push('RULE-SET,Instagram,Instagram');
+  if (ruleOptionsEnable.Emby) rules.push('RULE-SET,Emby,Emby');
+
+  if (ruleOptionsEnable.Streaming) {
+    rules.push(
+      'RULE-SET,Bahamut,Streaming',
+      'RULE-SET,Netflix,Streaming',
+      'RULE-SET,Disney,Streaming',
+      'RULE-SET,PrimeVideo,Streaming',
+      'RULE-SET,HBO,Streaming'
+    );
+  }
+
+  if (ruleOptionsEnable.TikTok) rules.push('RULE-SET,TikTok,TikTok');
+
+  rules.push(
     'DOMAIN-SUFFIX,nano.cr18.eu.org,SG',
     'GEOIP,cn,DIRECT',
     'MATCH,Final'
-  ];
+  );
+
+  config['rules'] = rules;
 
   return config;
 }
