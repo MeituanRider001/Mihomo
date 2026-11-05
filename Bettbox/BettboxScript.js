@@ -39,7 +39,7 @@ const serviceConfigs = [
   { name: 'Instagram', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Instagram.png' },
 
   // 细分流媒体组
-  { name: 'Bilibili', icon: 'https://cdn.jsdmirror.com/gh/Orz-3/mini@master/Color/Bilibili.png', proxies: ['DIRECT', 'HK', 'TW'] },
+  { name: 'Bilibili', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/bilibili.png', proxies: ['DIRECT', 'HK', 'TW'] },
   { name: 'Bahamut', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png', proxies: ['TW', 'HK', 'Manual'] },
   { name: 'Netflix', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Netflix.png' },
   { name: 'Disney', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Disney.png' },
