@@ -1,10 +1,5 @@
 // =========================================================================
 // Bettbox Mihomo 进阶流媒体与策略分流配置脚本
-// 功能特性：
-// 1. 节点智能清洗（过滤官网/广告/流量/过期等垃圾提示节点）
-// 2. 自动精准补齐国家/地区旗帜 Emoji（避免重复生成）
-// 3. 机场私有 DNS 与节点域名 hosts 自动处理（防回环死锁与超时）
-// 4. 精细化分流策略组及多地区自动优选/负载均衡支持
 // =========================================================================
 
 // Bettbox GUI 可视化控制开关支持
@@ -49,7 +44,6 @@ const serviceConfigs = [
 
 /**
  * 用户自定义配置开关（Bettbox GUI 面板可动态联动覆盖）
- * true: 开启该功能/策略组 | false: 关闭
  */
 var ruleOptionsEnable = {
   // --- 基础调度策略组 ---
@@ -59,41 +53,41 @@ var ruleOptionsEnable = {
   'LoadBalance': true, // 全球全节点负载均衡组
 
   // --- 分流服务策略组开关 ---
-  FCM: true,          // Google FCM 推送通道
-  Microsoft: true,    // 微软服务分流
-  Apple: true,        // 苹果服务分流
-  GitHub: true,       // GitHub 平台分流
-  Steam: true,        // Steam 平台与商店分流
-  Meta: true,         // Meta / Facebook 分流
-  Line: true,         // Line 社交通讯
-  PikPak: true,       // PikPak 私密云盘
-  AdBlock: true,      // 广告及恶意追踪拦截
-  Speedtest: true,    // Speedtest 网络测速
-  AI: true,           // 人工智能服务（OpenAI/Claude/Gemini 等）
-  Spotify: true,      // Spotify 音乐流媒体
-  YouTube: true,      // YouTube 视频平台
-  Google: true,       // Google 搜索及海外全家桶
-  Telegram: true,     // Telegram 电报通讯
-  Twitter: true,      // Twitter (X) 社交平台
-  Instagram: true,    // Instagram 社交分享
-  Emby: true,         // Emby 媒体服务器
-  Streaming: true,    // 国际流媒体总组（Netflix/Disney+/HBO等）
-  TikTok: true,       // TikTok 短视频
+  FCM: true,
+  Microsoft: true,
+  Apple: true,
+  GitHub: true,
+  Steam: true,
+  Meta: true,
+  Line: true,
+  PikPak: true,
+  AdBlock: true,
+  Speedtest: true,
+  AI: true,
+  Spotify: true,
+  YouTube: true,
+  Google: true,
+  Telegram: true,
+  Twitter: true,
+  Instagram: true,
+  Emby: true,
+  Streaming: true,
+  TikTok: true,
 
   // --- 节点与策略增强特性 ---
-  自动补国旗: true,        // 识别地区名称并自动添加国旗 Emoji（防重复添加）
-  极简模式: false,         // 极简模式（开启后隐藏全部细分分流组，仅保留主代理与兜底）
-  生成地区自动选择组: false, // 是否额外生成各地区独立的 url-test 自动优选组（如 HKAuto 等）
-  隐藏地区手动选择组: false, // 是否在面板中隐藏各地区手动选择组
-  生成低倍率组: false,     // 是否生成 0.1x~0.5x 低倍率/免费节点组
-  生成高倍率组: false,     // 是否生成 2x 以上高倍率节点组
-  分流组添加所有节点: false, // 是否在各业务分流组候选列表里平铺所有单节点
-  过滤低倍率节点: false,   // 是否直接剔除低倍率节点
-  过滤高倍率节点: false,   // 是否直接剔除高倍率节点
-  过滤非地区节点: true,    // 自动过滤机场通知、网站公告、流量信息等非节点行
-  屏蔽国外QUIC: true,      // 拦截境外 UDP 443 端口，强制走更稳定的 TCP/TLS
-  代理IPV4优先: true,      // 出站连接优先走 IPv4
-  代理IPV6优先: false      // 出站连接优先走 IPv6
+  自动补国旗: true,
+  极简模式: false,
+  生成地区自动选择组: false,
+  隐藏地区手动选择组: false,
+  生成低倍率组: false,
+  生成高倍率组: false,
+  分流组添加所有节点: false,
+  过滤低倍率节点: false,
+  过滤高倍率节点: false,
+  过滤非地区节点: true,
+  屏蔽国外QUIC: true,
+  代理IPV4优先: true,
+  代理IPV6优先: false
 };
 
 /**
@@ -121,7 +115,6 @@ const twPattern = '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|
 // 机场垃圾信息/非代理节点特征库
 const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
 
-// Other（其他地区组）排除规则：排除上述已知五大区域与垃圾节点
 const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
 const globalExclude = `(?i)${globalPattern}`;
 const hkFilter = `(?i)${hkPattern}`;
@@ -135,7 +128,7 @@ const globalExcludeRegex = new RegExp(globalPattern, 'i');
 const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
 const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
-// 区域指示码旗帜 Emoji 规范匹配（用于检测节点是否已有国旗）
+// 区域指示码旗帜 Emoji 规范匹配
 const flagEmojiRegex = /[\u{1F1E6}-\u{1F1FF}]{2}/u;
 
 /**
@@ -170,9 +163,6 @@ function stripDnsSuffix(dns) {
   return String(dns || '').replace(/#.*$/, '').trim();
 }
 
-/**
- * 当命中回环/本地 DNS 场景时，将节点 server 域名替换为其在 hosts 中的直连 IP，规避死锁
- */
 function applyHostsToProxies(proxies, hosts) {
   if (!hosts || typeof hosts !== 'object') return proxies;
   return proxies.map((proxy) => {
@@ -203,9 +193,6 @@ function simplifyDomainPolicy(matchedProxyPolicy) {
   return matchedProxyPolicy;
 }
 
-/**
- * 构建 DNS 与 Hosts：继承私有 DNS、节点域名 Policy，并在满足条件时改写节点 server
- */
 function buildDnsAndHostsConfig(config, filteredProxies) {
   const minimalModeEnabled = ruleOptionsEnable.极简模式;
   const originalDnsConfig = config.dns || {};
@@ -213,7 +200,6 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
   const proxyServerNameservers = originalDnsConfig['proxy-server-nameserver'] || [];
   const listenValue = originalDnsConfig['listen'];
 
-  // 判断是否需要由 hosts 直接改写节点地址（防本地回环 DNS 导致节点握手超时）
   const shouldRewriteByHosts =
     proxyServerNameservers.length === 1 &&
     typeof listenValue === 'string' &&
@@ -239,7 +225,6 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
     return commonDnsRegex.test(value);
   };
 
-  // 提取订阅中的非公共私有 DNS
   const privateDNS = [
     ...new Set(
       [...(originalDnsConfig['nameserver'] || []), ...privateProxyServerNameservers]
@@ -248,7 +233,6 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
     ),
   ];
 
-  // 匹配并保留原配置中针对节点域名的解析策略
   const matchedProxyPolicy = {};
   for (const [domain, dns] of Object.entries({
     ...originalDnsConfig['nameserver-policy'],
@@ -355,7 +339,6 @@ function main(config) {
     'store-fake-ip': true
   };
 
-  // 数据库自动更新配置
   config['geodata-mode'] = true;
   config['geo-auto-update'] = true;
   config['geo-update-interval'] = 24;
@@ -419,7 +402,7 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53']
   };
 
-  // 4. 组装策略组候选项
+  // 4. 组装策略组候选项（兼容极简模式）
   const allProxyNames = (config.proxies || []).map(p => p.name);
   
   const basicFunctionGroups = [];
@@ -427,24 +410,32 @@ function main(config) {
   if (ruleOptionsEnable['AutoGroup'] !== false) basicFunctionGroups.push('AutoGroup');
   if (ruleOptionsEnable['LoadBalance'] !== false) basicFunctionGroups.push('LoadBalance');
 
-  const baseRegionList = ['HK', 'SG', 'JP', 'US', 'TW', 'Other'];
-  if (ruleOptionsEnable.生成地区自动选择组) {
-    baseRegionList.push('HKAuto', 'SGAuto', 'JPAuto', 'USAuto', 'TWAuto');
+  // 【核心修复】：极简模式下不生成国家组，因此 baseRegionList 必须为空，杜绝 HK not found
+  const baseRegionList = [];
+  if (!ruleOptionsEnable.极简模式) {
+    baseRegionList.push('HK', 'SG', 'JP', 'US', 'TW', 'Other');
+    if (ruleOptionsEnable.生成地区自动选择组) {
+      baseRegionList.push('HKAuto', 'SGAuto', 'JPAuto', 'USAuto', 'TWAuto');
+    }
   }
 
   const rateGroupsList = [];
-  if (ruleOptionsEnable.生成低倍率组) {
-    rateGroupsList.push('LowGroup');
-  }
-  if (ruleOptionsEnable.生成高倍率组) {
-    rateGroupsList.push('HighGroup');
+  if (!ruleOptionsEnable.极简模式) {
+    if (ruleOptionsEnable.生成低倍率组) rateGroupsList.push('LowGroup');
+    if (ruleOptionsEnable.生成高倍率组) rateGroupsList.push('HighGroup');
   }
 
-  const manualGroupProxies = [
+  // 计算 Manual 组的代理项
+  let manualGroupProxies = [
     ...baseRegionList,
     ...basicFunctionGroups,
     ...rateGroupsList
   ];
+
+  // 如果在极简模式下基础组全被关掉了，则直接平铺所有单节点
+  if (manualGroupProxies.length === 0) {
+    manualGroupProxies = allProxyNames.length > 0 ? allProxyNames : ['DIRECT'];
+  }
 
   const commonProxies = ['Manual', ...basicFunctionGroups, ...baseRegionList, ...rateGroupsList];
   const serviceProxies = ruleOptionsEnable.分流组添加所有节点
@@ -505,10 +496,11 @@ function main(config) {
 
   // ⑤ 业务分流策略组
   if (ruleOptionsEnable.极简模式) {
+    const finalCandidates = ['Manual', ...basicFunctionGroups, 'DIRECT'];
     groups.push({
       name: 'Final',
       type: 'select',
-      proxies: ['Manual', ...basicFunctionGroups, 'DIRECT'],
+      proxies: [...new Set(finalCandidates)],
       icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png'
     });
   } else {
@@ -536,7 +528,7 @@ function main(config) {
     });
   }
 
-  // ⑥ 国家与地区细分策略组
+  // ⑥ 国家与地区细分策略组（极简模式下不生成）
   if (!ruleOptionsEnable.极简模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
@@ -709,8 +701,11 @@ function main(config) {
     if (ruleOptionsEnable.TikTok) rules.push('RULE-SET,TikTok,TikTok');
   }
 
+  // 极简模式下由于没有单独的 SG 策略组，该域名自动改走 Manual
+  const nanoTarget = ruleOptionsEnable.极简模式 ? 'Manual' : 'SG';
+
   rules.push(
-    'DOMAIN-SUFFIX,nano.cr18.eu.org,SG',
+    `DOMAIN-SUFFIX,nano.cr18.eu.org,${nanoTarget}`,
     'GEOIP,cn,DIRECT',
     'MATCH,Final'
   );
