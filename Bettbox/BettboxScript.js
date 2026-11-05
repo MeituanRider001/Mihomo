@@ -2,92 +2,121 @@
 // Bettbox Mihomo 进阶流媒体与策略分流配置脚本
 // =========================================================================
 
-// Bettbox GUI 可视化控制开关支持
+// Bettbox GUI 可视化控制开关支持：允许客户端通过图形界面动态覆盖配置
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
+// 基础图标与规则集远程 CDN 仓库基准地址
 const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/svg/';
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
 /**
  * 策略组与图标定义表（Bettbox 策略组渲染基础列表）
+ * 定义每个策略组的名称、图标、默认候选节点或特殊属性 (reject/direct/isBase)
  */
 const serviceConfigs = [
-  // 基础策略组
-  { name: 'Manual', icon: `${iconBaseUrl}Proxy.svg`, isBase: true },
-  { name: 'SelectGroup', icon: `${iconBaseUrl}Static.svg`, isBase: true },
-  { name: 'AutoGroup', icon: `${iconBaseUrl}Auto.svg`, isBase: true },
-  { name: 'LoadBalance', icon: `${iconBaseUrl}RoundRobin.svg`, isBase: true },
+  // --- 基础调度策略组 ---
+  { name: 'Manual', icon: `${iconBaseUrl}Proxy.svg`, isBase: true },          // 主手动调度总入口
+  { name: 'SelectGroup', icon: `${iconBaseUrl}Static.svg`, isBase: true },    // 全单节点手动汇总池
+  { name: 'AutoGroup', icon: `${iconBaseUrl}Auto.svg`, isBase: true },        // 全节点延迟自动优选
+  { name: 'LoadBalance', icon: `${iconBaseUrl}RoundRobin.svg`, isBase: true },// 全节点一致性哈希负载均衡
 
-  // 专属服务策略组
-  { name: 'AdBlock', icon: `${iconBaseUrl}AdBlock.svg`, reject: true },
-  { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },
-  { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },
-  { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },
-  { name: 'GitHub', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/GitHub.png', direct: true },
-  { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },
-  { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
-  { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
-  { name: 'Line', icon: `${iconBaseUrl}Line.svg` },
-  { name: 'Speedtest', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Speedtest.png', direct: true },
-  { name: 'AI', icon: `${iconBaseUrl}OpenAI.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] },
-  { name: 'Telegram', icon: `${iconBaseUrl}Telegram.svg` },
-  { name: 'Google', icon: `${iconBaseUrl}Google.svg` },
-  { name: 'Streaming', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/ForeignMedia.png' },
-  { name: 'YouTube', icon: `${iconBaseUrl}YouTube.svg` },
-  { name: 'Spotify', icon: `${iconBaseUrl}Spotify.svg` },
-  { name: 'Emby', icon: `${iconBaseUrl}Emby.svg` },
-  { name: 'TikTok', icon: `${iconBaseUrl}TikTok.svg` },
-  { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },
-  { name: 'Instagram', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Instagram.png' },
-  { name: 'Final', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png' }
+  // --- 基础平台与日常应用 ---
+  { name: 'AdBlock', icon: `${iconBaseUrl}AdBlock.svg`, reject: true },       // 广告与恶意域名拦截 (REJECT)
+  { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },               // Google FCM 消息推送通道
+  { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },   // 微软全家桶及 Windows Update
+  { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },           // 苹果官方服务及 CDN
+  { name: 'GitHub', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/GitHub.png', direct: true }, // GitHub 代码托管
+  { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },           // Steam 平台与商店分流
+  { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },         // PikPak 私密云盘
+  { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },                           // Meta / Facebook 全系应用
+  { name: 'Line', icon: `${iconBaseUrl}Line.svg` },                           // Line 社交通讯
+  { name: 'Speedtest', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Speedtest.png', direct: true }, // 测速流量分流
+  { name: 'AI', icon: `${iconBaseUrl}OpenAI.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] }, // AI 平台 (ChatGPT/Claude/Gemini)
+  { name: 'Telegram', icon: `${iconBaseUrl}Telegram.svg` },                   // 电报海外通讯节点
+  { name: 'Google', icon: `${iconBaseUrl}Google.svg` },                       // 谷歌海外搜索与服务
+  { name: 'YouTube', icon: `${iconBaseUrl}YouTube.svg` },                     // YouTube 独立视频流量
+  { name: 'Spotify', icon: `${iconBaseUrl}Spotify.svg` },                     // Spotify 音乐流媒体
+  { name: 'Emby', icon: `${iconBaseUrl}Emby.svg` },                           // 私有/公用 Emby 媒体服务器
+  { name: 'TikTok', icon: `${iconBaseUrl}TikTok.svg` },                       // TikTok 国际短视频
+  { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },                     // X (原 Twitter) 社交网络
+  { name: 'Instagram', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Instagram.png' }, // Instagram 图片社交
+
+  // --- 细分流媒体与特定服务 ---
+  { name: 'Bilibili', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Bilibili.png', proxies: ['DIRECT', 'HK', 'TW'] }, // B站港澳台限定番剧调度
+  { name: 'Bahamut', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Bahamut.png', proxies: ['TW', 'HK', 'Manual'] },  // 巴哈姆特动画疯 (严审台湾IP)
+  { name: 'Netflix', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Netflix.png' },     // 网飞专属分流
+  { name: 'Disney', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Disney.png' },       // 迪士尼流媒体
+  { name: 'PrimeVideo', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Prime_Video.png' }, // 亚马逊 Prime 视频
+  { name: 'HBO', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/HBO.png' },             // HBO Max / Max 视频
+
+  // --- 全局兜底策略 ---
+  { name: 'Final', icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png' }           // 未匹配规则的最终兜底
 ];
 
 /**
- * 用户自定义配置开关（Bettbox GUI 面板可动态联动覆盖）
+ * 用户自定义配置开关（对应 Bettbox GUI 界面中可直接切换的选项）
+ * true: 开启该功能/策略组 | false: 关闭该功能/策略组
  */
 var ruleOptionsEnable = {
-  // --- 基础调度策略组 ---
-  'Manual': true,      // 手动汇总策略组（主策略入口）
-  'SelectGroup': true, // 手动单节点聚合列表
-  'AutoGroup': true,   // 全球全节点延迟自动优选
-  'LoadBalance': true, // 全球全节点负载均衡组
+  // --- 1. 基础调度策略组开关 ---
+  'Manual': true,              // 是否保留手动调度聚合组 (Manual)
+  'SelectGroup': true,         // 是否生成全部单节点手动组 (SelectGroup)
+  'AutoGroup': true,           // 是否生成全局自动优选组 (AutoGroup)
+  'LoadBalance': true,         // 是否生成全局负载均衡组 (LoadBalance)
 
-  // --- 分流服务策略组开关 ---
-  FCM: true,
-  Microsoft: true,
-  Apple: true,
-  GitHub: true,
-  Steam: true,
-  Meta: true,
-  Line: true,
-  PikPak: true,
-  AdBlock: true,
-  Speedtest: true,
-  AI: true,
-  Spotify: true,
-  YouTube: true,
-  Google: true,
-  Telegram: true,
-  Twitter: true,
-  Instagram: true,
-  Emby: true,
-  Streaming: true,
-  TikTok: true,
+  // --- 2. 专属分流服务策略开关 ---
+  FCM: true,                  // 启用 Google FCM 推送通道分流
+  Microsoft: true,            // 启用微软全家桶分流
+  Apple: true,                // 启用苹果官方服务分流
+  GitHub: true,               // 启用 GitHub 分流
+  Steam: true,                // 启用 Steam 平台分流
+  Meta: true,                 // 启用 Meta / Facebook 分流
+  Line: true,                 // 启用 Line 分流
+  PikPak: true,               // 启用 PikPak 网盘分流
+  AdBlock: true,              // 启用广告与追踪域名拦截
+  Speedtest: true,            // 启用网络测速分流
+  AI: true,                   // 启用 AI 服务分流
+  Spotify: true,              // 启用 Spotify 分流
+  YouTube: true,              // 启用 YouTube 分流
+  Google: true,               // 启用 Google 服务分流
+  Telegram: true,             // 启用 Telegram 分流
+  Twitter: true,              // 启用 Twitter (X) 分流
+  Instagram: true,            // 启用 Instagram 分流
+  Emby: true,                 // 启用 Emby 媒体服分流
+  TikTok: true,               // 启用 TikTok 分流
 
-  // --- 节点与策略增强特性 ---
-  自动补国旗: true,
-  极简模式: false,
-  生成地区自动选择组: false,
-  隐藏地区手动选择组: false,
-  生成低倍率组: false,
-  生成高倍率组: false,
-  分流组添加所有节点: false,
-  过滤低倍率节点: false,
-  过滤高倍率节点: false,
-  过滤非地区节点: true,
-  屏蔽国外QUIC: true,
-  代理IPV4优先: true,
-  代理IPV6优先: false
+  // --- 3. 独立流媒体与B站策略组开关 ---
+  Bilibili: true,             // 启用哔哩哔哩港澳台专属调度
+  Bahamut: true,              // 启用巴哈姆特动画疯专属调度 (优先台湾节点)
+  Netflix: true,              // 启用 Netflix 独立分流策略组
+  Disney: true,               // 启用 Disney+ 独立分流策略组
+  PrimeVideo: true,           // 启用 Prime Video 独立分流策略组
+  HBO: true,                  // 启用 HBO Max 独立分流策略组
+
+  // --- 4. 节点处理与增强特性 ---
+  自动补国旗: true,            // 根据节点名称自动补齐对应旗帜 Emoji（防重复叠加）
+  去除节点广告前缀后缀: true,   // 清理【专线】、[特惠]、官网网址及尾部流量时间等广告修饰
+  节点序号规整化: true,        // 节点末尾单数字规范化补零（例如：香港 1 -> 香港 01）
+  节点裂变UDP: false,          // 自动克隆生成 [UDP] 专属衍生节点，便于独立调用
+  极简模式: false,             // 极简模式开关（开启后隐藏全部细化分流，仅保留主代理与兜底）
+  生成地区自动选择组: false,   // 是否额外生成各地区独立的 url-test 自动优选组 (如 HKAuto 等)
+  隐藏地区手动选择组: false,   // 是否在界面中隐藏各地区手动选择组
+  生成低倍率组: false,         // 是否生成 0.1x~0.5x 低倍率/免费节点组
+  生成高倍率组: false,         // 是否生成 2x 以上高倍率节点组
+  分流组添加所有节点: false,   // 是否在各业务策略组候选中直接平铺所有底层单节点
+  过滤低倍率节点: false,       // 是否直接从订阅中剔除低倍率节点
+  过滤高倍率节点: false,       // 是否直接从订阅中剔除高倍率节点
+  过滤非地区节点: true,        // 过滤官网、到期、流量信息等非代理行
+  屏蔽国外QUIC: true,          // 拦截境外 UDP 443 端口，强制回退至稳定的 TCP/TLS
+  代理IPV4优先: true,          // 节点出站连接优先使用 IPv4
+  代理IPV6优先: false,         // 节点出站连接优先使用 IPv6
+
+  // --- 5. DNS 与高级网络微调 ---
+  DNS防泄漏强化: true,        // 开启 respect-rules，严格杜绝未加密 DNS 越级解析
+  DNSFallback容灾: true,      // 主 DoH 出现异常时自动启用备用公共 DNS 容灾
+  特定域名阻断IPv6: true,      // 强制 Netflix 等特定流媒体仅走 IPv4，避免 IPv6 跨区风控
+  地区自动测试间隔: 1800,      // 地区自动优选组测速间隔 (秒)
+  地区自动测试容差: 20         // 地区自动优选组容差切换阈值 (ms)
 };
 
 /**
@@ -99,22 +128,25 @@ Compatible_With_Bettbox.policyGroupOptions = [
   'HKAuto', 'SGAuto', 'JPAuto', 'USAuto', 'TWAuto',
   'LowGroup', 'HighGroup',
   'FCM', 'Microsoft', 'Apple', 'GitHub', 'Steam', 'Meta', 'Line', 'PikPak', 'AdBlock',
-  'Speedtest', 'AI', 'Telegram', 'Google', 'YouTube', 'Streaming', 
-  'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram', 'Final'
+  'Speedtest', 'AI', 'Telegram', 'Google', 'YouTube',
+  'Spotify', 'Emby', 'TikTok', 'Twitter', 'Instagram',
+  'Bilibili', 'Bahamut', 'Netflix', 'Disney', 'PrimeVideo', 'HBO', 'Final'
 ];
 
 // ==========================================
-// 1. 地区特征与节点清洗正则表达式
+// 1. 地区特征与正则规范
 // ==========================================
+// 各国家/地区严格匹配正则
 const hkPattern = '(🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\\s*kong)';
 const jpPattern = '(🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan)';
 const usPattern = '(🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\\s*states)';
 const sgPattern = '(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)';
 const twPattern = '(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)';
 
-// 机场垃圾信息/非代理节点特征库
+// 机场通知、广告与垃圾非节点行特征过滤库
 const globalPattern = '(群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|电报|频道|无法|说明|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\\.me\\/\\+|\\bexpire\\b|\\bhttps?:\\/\\/|\\.com|\\btraffic\\b)';
 
+// Other 策略组排除规则：剔除上述五大常规地区及垃圾节点
 const excludeMainlandPattern = `(${hkPattern}|${jpPattern}|${usPattern}|${sgPattern}|${twPattern})`;
 const globalExclude = `(?i)${globalPattern}`;
 const hkFilter = `(?i)${hkPattern}`;
@@ -128,23 +160,46 @@ const globalExcludeRegex = new RegExp(globalPattern, 'i');
 const lowRateFilter = /(?:(?<![\d.])0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])/i;
 const highRateFilter = /(?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))/i;
 
-// 区域指示码旗帜 Emoji 规范匹配
+// 严格使用 Unicode 区域指示码匹配旗帜 Emoji（\u{1F1E6}-\u{1F1FF}）
 const flagEmojiRegex = /[\u{1F1E6}-\u{1F1FF}]{2}/u;
 
 /**
- * 自动识别并补充对应国旗 Emoji（已有国旗的节点直接返回原名称）
+ * 纯净节点命名：剔除机场在节点前后附加的营销与广告修饰词
+ */
+function cleanNodeName(name) {
+  if (!name) return '';
+  let cleaned = name;
+  // 去除前缀：【专线】、[特惠]、(BGP) 等
+  cleaned = cleaned.replace(/^[\[【(（][^\]】)）]*(专线|特惠|游戏|BGP|中继|IPLC|IEPL|中转|直连|高速|优质|推荐)[^\]】)）]*[\]】)）]\s*/i, '');
+  // 去除推广前缀：官网、网址、域名等
+  cleaned = cleaned.replace(/^(官网|网址|地址|域名|官址)\s*[:：]\s*\S+\s*[-—|]?\s*/i, '');
+  // 去除后缀：| 剩余流量: xxx、- 到期时间: xxx 等
+  cleaned = cleaned.replace(/\s*[-—|]\s*(剩余流量|到期时间|已用|倍率|官网|备用)\s*[:：]?\s*.*$/i, '');
+  return cleaned.trim() || name;
+}
+
+/**
+ * 自动识别并补齐国旗 Emoji（已有国旗的节点直接原样返回，杜绝重复添加）
  */
 function autoAppendFlag(name) {
   if (!name) return '';
-  if (flagEmojiRegex.test(name)) {
-    return name;
-  }
+  if (flagEmojiRegex.test(name)) return name;
   if (new RegExp(hkPattern, 'i').test(name)) return `🇭🇰 ${name}`;
   if (new RegExp(jpPattern, 'i').test(name)) return `🇯🇵 ${name}`;
   if (new RegExp(usPattern, 'i').test(name)) return `🇺🇸 ${name}`;
   if (new RegExp(sgPattern, 'i').test(name)) return `🇸🇬 ${name}`;
   if (new RegExp(twPattern, 'i').test(name)) return `🇹🇼 ${name}`;
   return name;
+}
+
+/**
+ * 节点序号规整化与补零：将末尾孤立数字规整为两位数（如 香港 1 -> 香港 01）
+ */
+function formatNodeIndex(name) {
+  if (!name) return '';
+  let formatted = name.replace(/\s+/g, ' ').trim();
+  formatted = formatted.replace(/(?<=[^\d])([1-9])(?=[^\d]*$)/, '0$1');
+  return formatted;
 }
 
 // ==========================================
@@ -163,6 +218,9 @@ function stripDnsSuffix(dns) {
   return String(dns || '').replace(/#.*$/, '').trim();
 }
 
+/**
+ * 当命中回环/本地 DNS 场景时，将节点 server 域名直接替换为其在 hosts 中的直连 IP，杜绝握手超时
+ */
 function applyHostsToProxies(proxies, hosts) {
   if (!hosts || typeof hosts !== 'object') return proxies;
   return proxies.map((proxy) => {
@@ -193,6 +251,9 @@ function simplifyDomainPolicy(matchedProxyPolicy) {
   return matchedProxyPolicy;
 }
 
+/**
+ * 完整构建 DNS 与 Hosts：继承私有 DNS、节点域名 Policy，并在满足条件时改写节点 server
+ */
 function buildDnsAndHostsConfig(config, filteredProxies) {
   const minimalModeEnabled = ruleOptionsEnable.极简模式;
   const originalDnsConfig = config.dns || {};
@@ -200,6 +261,7 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
   const proxyServerNameservers = originalDnsConfig['proxy-server-nameserver'] || [];
   const listenValue = originalDnsConfig['listen'];
 
+  // 判断是否需要通过 hosts 改写节点域名（解决本地监听导致节点握手死锁）
   const shouldRewriteByHosts =
     proxyServerNameservers.length === 1 &&
     typeof listenValue === 'string' &&
@@ -225,6 +287,7 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
     return commonDnsRegex.test(value);
   };
 
+  // 提取订阅中的非公共私有 DNS
   const privateDNS = [
     ...new Set(
       [...(originalDnsConfig['nameserver'] || []), ...privateProxyServerNameservers]
@@ -233,6 +296,7 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
     ),
   ];
 
+  // 匹配并保留原订阅针对节点域名的私有解析 policy
   const matchedProxyPolicy = {};
   for (const [domain, dns] of Object.entries({
     ...originalDnsConfig['nameserver-policy'],
@@ -269,6 +333,32 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
   const foreignDNS = ['https://cloudflare-dns.com/dns-query#Manual', 'https://dns.google/dns-query#Manual'];
   const defaultDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
   const proxyServerDNS = ['114.114.114.114#DIRECT', 'tls://223.5.5.5#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
+  const fallbackDNS = ['https://1.0.0.1/dns-query#Manual', 'https://8.8.4.4/dns-query#Manual'];
+
+  const nameserverPolicy = {
+    'geosite:private': 'system',
+    'geosite:category-entertainment-cn,douyin': ['system', '180.184.1.1', '180.184.2.2'],
+    'geosite:cn': chinaDNS,
+  };
+
+  // 特定流媒体阻断 IPv6：锁定 IPv4 解析，阻断 AAAA 记录，避免跨区风控与断流
+  if (ruleOptionsEnable.特定域名阻断IPv6) {
+    const blockIpv6Domains = [
+      '+.netflix.com',
+      '+.netflix.net',
+      '+.nflximg.net',
+      '+.nflxvideo.net',
+      '+.nflxext.com',
+      '+.disneyplus.com',
+      '+.disney-portal.my.onetrust.com',
+      '+.hbo.com',
+      '+.hbomax.com',
+      '+.max.com'
+    ];
+    blockIpv6Domains.forEach(domain => {
+      nameserverPolicy[domain] = ['https://cloudflare-dns.com/dns-query#Manual'];
+    });
+  }
 
   const dns = {
     enable: true,
@@ -291,15 +381,28 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
       'proxy-server-nameserver-policy': proxyServerPolicy,
     }),
     nameserver: foreignDNS,
-    'nameserver-policy': {
-      'geosite:private': 'system',
-      'geosite:category-entertainment-cn,douyin': ['system', '180.184.1.1', '180.184.2.2'],
-      'geosite:cn': chinaDNS,
-    },
+    'nameserver-policy': nameserverPolicy,
     'direct-nameserver': chinaDNS,
     'direct-nameserver-follow-policy': true,
   };
 
+  // 严格遵守规则链分流 DNS 查询
+  if (ruleOptionsEnable.DNS防泄漏强化) {
+    dns['respect-rules'] = true;
+  }
+
+  // 容灾备份 DNS 解析服务
+  if (ruleOptionsEnable.DNSFallback容灾) {
+    dns['fallback'] = fallbackDNS;
+    dns['fallback-filter'] = {
+      geoip: true,
+      geoip_code: 'CN',
+      geosite: ['gfw'],
+      ipcidr: ['240.0.0.0/4']
+    };
+  }
+
+  // 预解析公共 DoH 域名与屏蔽 P2P 盗流域名
   const hosts = {
     'doh.pub': ['1.12.12.12', '120.53.53.53'],
     'cloudflare-dns.com': ['1.1.1.1', '1.0.0.1'],
@@ -319,7 +422,7 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
 // 3. 配置生成主入口函数 (main)
 // ==========================================
 function main(config) {
-  // 1. 全局核心网络与面板参数
+  // 1. 全局运行参数与面板配置
   config['mixed-port'] = 7890;
   config['allow-lan'] = true;
   config['ipv6'] = true;
@@ -339,6 +442,7 @@ function main(config) {
     'store-fake-ip': true
   };
 
+  // GeoIP / GeoSite 规则数据库自动更新配置
   config['geodata-mode'] = true;
   config['geo-auto-update'] = true;
   config['geo-update-interval'] = 24;
@@ -349,13 +453,33 @@ function main(config) {
     asn: "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb"
   };
 
-  // 2. 节点预处理：执行清洗、倍率过滤与自动加国旗
+  // 2. Sniffer 嗅探器配置（嗅探握手报文，精准还原 Fake-IP 域名）
+  config['sniffer'] = {
+    enable: true,
+    'force-dns-mapping': true,
+    'parse-pure-ip': true,
+    'override-destination': false,
+    sniff: {
+      HTTP: { ports: [80, '8080-8880'], 'override-destination': true },
+      TLS: { ports: [443, 8443] },
+      QUIC: { ports: [443, 8443] }
+    },
+    'skip-domain': [
+      'Mijia Cloud',
+      'dlg.io.mi.com',
+      '+.apple.com',
+      '+.push.apple.com'
+    ]
+  };
+
+  // 3. 节点预处理：清洗、去广告、规整序号、补国旗、裂变与倍率过滤
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
 
   const rawProxies = config.proxies || [];
   const processedProxies = [];
+  const fisionProxies = [];
 
   for (const proxy of rawProxies) {
     const type = String(proxy.type || '').toLowerCase();
@@ -366,24 +490,48 @@ function main(config) {
     if (ruleOptionsEnable.过滤低倍率节点 && lowRateFilter.test(name)) continue;
     if (ruleOptionsEnable.过滤高倍率节点 && highRateFilter.test(name)) continue;
 
+    // 剔除广告与修饰词
+    if (ruleOptionsEnable.去除节点广告前缀后缀) {
+      name = cleanNodeName(name);
+    }
+
+    // 规整末尾序号
+    if (ruleOptionsEnable.节点序号规整化) {
+      name = formatNodeIndex(name);
+    }
+
+    // 自动补齐国旗 Emoji
     if (ruleOptionsEnable.自动补国旗) {
       name = autoAppendFlag(name);
-      proxy.name = name;
     }
+    proxy.name = name;
 
     if (ipPref) {
       proxy['ip-version'] = ipPref;
     }
     processedProxies.push(proxy);
+
+    // 节点裂变：针对支持 UDP 的节点衍生出 [UDP] 专属节点
+    if (ruleOptionsEnable.节点裂变UDP && proxy.udp !== false) {
+      const clonedProxy = JSON.parse(JSON.stringify(proxy));
+      clonedProxy.name = `[UDP] ${proxy.name}`;
+      clonedProxy.udp = true;
+      fisionProxies.push(clonedProxy);
+    }
   }
 
-  // 3. 构建 DNS、Hosts 映射并写回节点
+  // 合并裂变衍生节点进入总节点池
+  if (fisionProxies.length > 0) {
+    processedProxies.push(...fisionProxies);
+  }
+
+  // 4. 构建 DNS、Hosts 并将处理后的映射写回核心
   const { dns, hosts, mappedProxies } = buildDnsAndHostsConfig(config, processedProxies);
   config['dns'] = dns;
   config['hosts'] = hosts;
   config['proxies'] = mappedProxies;
 
-  // 时间同步与全局 TUN 设定
+  // NTP 授时同步与 TUN 虚拟网卡配置
   config['ntp'] = {
     enable: true,
     'write-to-system': false,
@@ -402,7 +550,7 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53']
   };
 
-  // 4. 组装策略组候选项（兼容极简模式）
+  // 5. 组装策略组备选池（自适应极简模式）
   const allProxyNames = (config.proxies || []).map(p => p.name);
   
   const basicFunctionGroups = [];
@@ -410,7 +558,7 @@ function main(config) {
   if (ruleOptionsEnable['AutoGroup'] !== false) basicFunctionGroups.push('AutoGroup');
   if (ruleOptionsEnable['LoadBalance'] !== false) basicFunctionGroups.push('LoadBalance');
 
-  // 【核心修复】：极简模式下不生成国家组，因此 baseRegionList 必须为空，杜绝 HK not found
+  // 非极简模式下正常挂载地区组
   const baseRegionList = [];
   if (!ruleOptionsEnable.极简模式) {
     baseRegionList.push('HK', 'SG', 'JP', 'US', 'TW', 'Other');
@@ -419,20 +567,19 @@ function main(config) {
     }
   }
 
+  // 倍率过滤策略组挂载
   const rateGroupsList = [];
   if (!ruleOptionsEnable.极简模式) {
     if (ruleOptionsEnable.生成低倍率组) rateGroupsList.push('LowGroup');
     if (ruleOptionsEnable.生成高倍率组) rateGroupsList.push('HighGroup');
   }
 
-  // 计算 Manual 组的代理项
   let manualGroupProxies = [
     ...baseRegionList,
     ...basicFunctionGroups,
     ...rateGroupsList
   ];
 
-  // 如果在极简模式下基础组全被关掉了，则直接平铺所有单节点
   if (manualGroupProxies.length === 0) {
     manualGroupProxies = allProxyNames.length > 0 ? allProxyNames : ['DIRECT'];
   }
@@ -442,10 +589,10 @@ function main(config) {
     ? [...commonProxies, ...allProxyNames]
     : commonProxies;
 
-  // 5. 动态构建策略组列表
+  // 6. 动态创建策略组
   const groups = [];
 
-  // ① 主手动选择组 (Manual)
+  // ① 主手动调度组 (Manual)
   if (ruleOptionsEnable['Manual'] !== false) {
     groups.push({
       name: 'Manual',
@@ -455,7 +602,7 @@ function main(config) {
     });
   }
 
-  // ② 全部单节点手动选择组 (SelectGroup)
+  // ② 全单节点手动组 (SelectGroup)
   if (ruleOptionsEnable['SelectGroup'] !== false) {
     groups.push({
       name: 'SelectGroup',
@@ -480,7 +627,7 @@ function main(config) {
     });
   }
 
-  // ④ 全局一致性哈希负载均衡组 (LoadBalance)
+  // ④ 全局负载均衡组 (LoadBalance)
   if (ruleOptionsEnable['LoadBalance'] !== false) {
     groups.push({
       name: 'LoadBalance',
@@ -494,7 +641,7 @@ function main(config) {
     });
   }
 
-  // ⑤ 业务分流策略组
+  // ⑤ 专属分流策略组创建
   if (ruleOptionsEnable.极简模式) {
     const finalCandidates = ['Manual', ...basicFunctionGroups, 'DIRECT'];
     groups.push({
@@ -528,7 +675,7 @@ function main(config) {
     });
   }
 
-  // ⑥ 国家与地区细分策略组（极简模式下不生成）
+  // ⑥ 国家/地区细分策略组与自动优选组（支持微调测试容差与间隔）
   if (!ruleOptionsEnable.极简模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
@@ -553,6 +700,9 @@ function main(config) {
     });
 
     if (ruleOptionsEnable.生成地区自动选择组) {
+      const autoInterval = Number(ruleOptionsEnable.地区自动测试间隔) || 1800;
+      const autoTolerance = Number(ruleOptionsEnable.地区自动测试容差) || 20;
+
       const regionAutoConfigs = [
         { name: 'HKAuto', filter: hkFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png' },
         { name: 'SGAuto', filter: sgFilter, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png' },
@@ -566,8 +716,8 @@ function main(config) {
           name: r.name,
           type: 'url-test',
           'include-all': true,
-          interval: 1800,
-          tolerance: 20,
+          interval: autoInterval,
+          tolerance: autoTolerance,
           hidden: true,
           url: 'http://1.1.1.1/generate_204',
           filter: r.filter,
@@ -602,7 +752,7 @@ function main(config) {
 
   config['proxy-groups'] = groups;
 
-  // 6. 规则集提供者定义 (Classical 与 MRS)
+  // 7. 规则集提供者定义 (Classical 与 MRS)
   const cProvider = { type: 'http', behavior: 'classical', format: 'text', interval: 86400 };
   const domainMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'domain' };
   const ipMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'ipcidr' };
@@ -627,6 +777,9 @@ function main(config) {
     TikTok: { ...cProvider, url: 'https://raw.githubusercontent.com/Repcz/Tool/refs/heads/X/mihomo/Rules/TikTok.list' },
     Speedtest: { ...cProvider, url: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/Speedtest/Speedtest.list' },
 
+    // B站港澳台分流规则集
+    BilibiliHMT: { ...cProvider, url: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/BiliBiliHMT/BiliBiliHMT.list' },
+
     'category-ads': { ...domainMrs, url: `${ruleSetBaseUrl}geosite/category-ads.mrs`, path: './ruleset/category-ads.mrs' },
     googlefcm: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/googlefcm.mrs`, path: './ruleset/googlefcm.mrs' },
     microsoft: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/microsoft.mrs`, path: './ruleset/microsoft.mrs' },
@@ -642,7 +795,7 @@ function main(config) {
     pikpak: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/pikpak.mrs`, path: './ruleset/pikpak.mrs' }
   };
 
-  // 7. 规则执行链构建（自上而下匹配）
+  // 8. 规则执行链构建（自上而下匹配执行）
   const rules = [
     'RULE-SET,Lan,DIRECT',
     'RULE-SET,Direct,DIRECT',
@@ -688,20 +841,21 @@ function main(config) {
     if (ruleOptionsEnable.Instagram) rules.push('RULE-SET,Instagram,Instagram');
     if (ruleOptionsEnable.Emby) rules.push('RULE-SET,Emby,Emby');
 
-    if (ruleOptionsEnable.Streaming) {
-      rules.push(
-        'RULE-SET,Bahamut,Streaming',
-        'RULE-SET,Netflix,Streaming',
-        'RULE-SET,Disney,Streaming',
-        'RULE-SET,PrimeVideo,Streaming',
-        'RULE-SET,HBO,Streaming'
-      );
+    // B站港澳台调度
+    if (ruleOptionsEnable.Bilibili) {
+      rules.push('RULE-SET,BilibiliHMT,Bilibili');
     }
+
+    // 细分流媒体调度
+    if (ruleOptionsEnable.Bahamut) rules.push('RULE-SET,Bahamut,Bahamut');
+    if (ruleOptionsEnable.Netflix) rules.push('RULE-SET,Netflix,Netflix');
+    if (ruleOptionsEnable.Disney) rules.push('RULE-SET,Disney,Disney');
+    if (ruleOptionsEnable.PrimeVideo) rules.push('RULE-SET,PrimeVideo,PrimeVideo');
+    if (ruleOptionsEnable.HBO) rules.push('RULE-SET,HBO,HBO');
 
     if (ruleOptionsEnable.TikTok) rules.push('RULE-SET,TikTok,TikTok');
   }
 
-  // 极简模式下由于没有单独的 SG 策略组，该域名自动改走 Manual
   const nanoTarget = ruleOptionsEnable.极简模式 ? 'Manual' : 'SG';
 
   rules.push(
