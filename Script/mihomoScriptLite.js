@@ -506,7 +506,6 @@ function main(config) {
     'RULE-SET,PrimeVideo,Streaming',
     'RULE-SET,HBO,Streaming',
     'RULE-SET,TikTok,TikTok',
-    'DOMAIN-SUFFIX,nano.cr18.eu.org,SG',
     'GEOIP,cn,DIRECT',
     'MATCH,Final'
   ];
