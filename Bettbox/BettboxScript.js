@@ -1,5 +1,5 @@
 // =========================================================================
-// Bettbox Mihomo 进阶流媒体与策略分流配置脚本
+// Bettbox Mihomo 进阶流媒体与策略分流配置脚本 (精准 QUIC 与规则排布优化版)
 // =========================================================================
 
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
@@ -102,7 +102,7 @@ var ruleOptionsEnable = {
   过滤低倍率节点: false,
   过滤高倍率节点: false,
   过滤非地区节点: true,
-  屏蔽国外QUIC: true,
+  屏蔽国外QUIC: true,         // 精准拦截境外 QUIC，防止境外流媒体 UDP 断流
   代理IPV4优先: true,
   代理IPV6优先: false,
 
@@ -712,7 +712,7 @@ function main(config) {
 
   config['proxy-groups'] = groups;
 
-  // 7. 规则集提供者
+  // 7. 规则集提供者定义 (Classical 与 MRS)
   const cProvider = { type: 'http', behavior: 'classical', format: 'text', interval: 86400 };
   const domainMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'domain' };
   const ipMrs = { type: 'http', format: 'mrs', interval: 86400, behavior: 'ipcidr' };
@@ -739,6 +739,9 @@ function main(config) {
 
     BilibiliHMT: { ...cProvider, url: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/BiliBiliHMT/BiliBiliHMT.list' },
 
+    // 【新增】精准非中国资产规则集，专用于境外 QUIC 拦截与精确分流判定
+    'geolocation-!cn': { ...domainMrs, url: `${ruleSetBaseUrl}geosite/geolocation-!cn.mrs`, path: './ruleset/geolocation-!cn.mrs' },
+
     'category-ads': { ...domainMrs, url: `${ruleSetBaseUrl}geosite/category-ads.mrs`, path: './ruleset/category-ads.mrs' },
     googlefcm: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/googlefcm.mrs`, path: './ruleset/googlefcm.mrs' },
     microsoft: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/microsoft.mrs`, path: './ruleset/microsoft.mrs' },
@@ -754,15 +757,16 @@ function main(config) {
     pikpak: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/pikpak.mrs`, path: './ruleset/pikpak.mrs' }
   };
 
-  // 8. 规则执行链
+  // 8. 规则执行链构建（自上而下匹配执行）
   const rules = [
     'RULE-SET,Lan,DIRECT',
     'RULE-SET,Direct,DIRECT',
     'RULE-SET,Reject,REJECT'
   ];
 
+  // 【优化】排布位置后移至常规直连白名单之后，且改用 geolocation-!cn 精准匹配境外 UDP 443
   if (ruleOptionsEnable.屏蔽国外QUIC) {
-    rules.push('AND,((NETWORK,UDP),(DST-PORT,443),(GEOIP,CN,DIRECT,REVERSE)),REJECT');
+    rules.push('AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,geolocation-!cn)),REJECT');
   }
 
   if (!ruleOptionsEnable.极简模式 && ruleOptionsEnable.AdBlock) {
