@@ -8,7 +8,7 @@ const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/sv
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
 /**
- * 策略组与图标定义表（已修正 Bilibili 及所有外部图标为高可用 CDN PNG 源）
+ * 策略组与图标定义表
  */
 const serviceConfigs = [
   // 基础策略组
@@ -38,8 +38,8 @@ const serviceConfigs = [
   { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },
   { name: 'Instagram', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Instagram.png' },
 
-  // 细分流媒体组（Bilibili 换用免代理高速且大小写正确的标准 Koolson 彩色 PNG 图标）
-  { name: 'Bilibili', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Bilibili.png', proxies: ['DIRECT', 'HK', 'TW'] },
+  // 细分流媒体组
+  { name: 'Bilibili', icon: 'https://cdn.jsdmirror.com/gh/Orz-3/mini@master/Color/Bilibili.png', proxies: ['DIRECT', 'HK', 'TW'] },
   { name: 'Bahamut', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png', proxies: ['TW', 'HK', 'Manual'] },
   { name: 'Netflix', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Netflix.png' },
   { name: 'Disney', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Disney.png' },
