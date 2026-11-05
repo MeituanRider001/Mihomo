@@ -8,7 +8,7 @@ const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/sv
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
 /**
- * 策略组与图标定义表
+ * 策略组与图标定义表（已修正 Bilibili 及所有外部图标为高可用 CDN PNG 源）
  */
 const serviceConfigs = [
   // 基础策略组
@@ -38,8 +38,8 @@ const serviceConfigs = [
   { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },
   { name: 'Instagram', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Instagram.png' },
 
-  // 细分流媒体组（替换为可靠的镜像图标源）
-  { name: 'Bilibili', icon: `${iconBaseUrl}BiliBili.svg`, proxies: ['DIRECT', 'HK', 'TW'] },
+  // 细分流媒体组（Bilibili 换用免代理高速且大小写正确的标准 Koolson 彩色 PNG 图标）
+  { name: 'Bilibili', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Bilibili.png', proxies: ['DIRECT', 'HK', 'TW'] },
   { name: 'Bahamut', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png', proxies: ['TW', 'HK', 'Manual'] },
   { name: 'Netflix', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Netflix.png' },
   { name: 'Disney', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Disney.png' },
@@ -50,7 +50,7 @@ const serviceConfigs = [
 ];
 
 /**
- * 用户自定义配置开关（Bettbox GUI 面板识别布尔值渲染开关）
+ * 用户自定义配置开关
  */
 var ruleOptionsEnable = {
   // 基础策略组
@@ -110,13 +110,13 @@ var ruleOptionsEnable = {
   DNSFallback容灾: true,
   特定域名阻断IPv6: true,
 
-  // --- 地区自动测试预设档位开关（Bettbox 面板可直接切换） ---
+  // 地区自动测试预设档位开关
   自动测试间隔_10分钟: false,
-  自动测试间隔_30分钟: true,   // 默认 1800 秒
+  自动测试间隔_30分钟: true,
   自动测试间隔_60分钟: false,
 
   自动测试容差_10ms: false,
-  自动测试容差_20ms: true,    // 默认 20ms
+  自动测试容差_20ms: true,
   自动测试容差_50ms: false
 };
 
@@ -441,7 +441,6 @@ function main(config) {
     ]
   };
 
-  // 节点预处理
   let ipPref = null;
   if (ruleOptionsEnable.代理IPV4优先 && !ruleOptionsEnable.代理IPV6优先) ipPref = 'ipv4-prefer';
   if (ruleOptionsEnable.代理IPV6优先 && !ruleOptionsEnable.代理IPV4优先) ipPref = 'ipv6-prefer';
@@ -631,7 +630,7 @@ function main(config) {
     });
   }
 
-  // ⑥ 地区细分策略组（动态读取面板切换的测试间隔与容差档位）
+  // ⑥ 地区细分策略组
   if (!ruleOptionsEnable.极简模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
@@ -656,7 +655,6 @@ function main(config) {
     });
 
     if (ruleOptionsEnable.生成地区自动选择组) {
-      // 动态计算面板档位
       let dynamicInterval = 1800;
       if (ruleOptionsEnable.自动测试间隔_10分钟) dynamicInterval = 600;
       if (ruleOptionsEnable.自动测试间隔_60分钟) dynamicInterval = 3600;
