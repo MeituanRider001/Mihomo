@@ -152,6 +152,8 @@ const jpFilter = `(?i)${jpPattern}`;
 const usFilter = `(?i)${usPattern}`;
 const sgFilter = `(?i)${sgPattern}`;
 const twFilter = `(?i)${twPattern}`;
+// 仅匹配港 / 日 / 美 / 新 / 台五大地区（用于负载均衡组收窄节点范围）
+const fiveRegionFilter = `(?i)${excludeMainlandPattern}`;
 const otherExclude = `(?i)(${excludeMainlandPattern}|${globalPattern})`;
 
 const globalExcludeRegex = new RegExp(globalPattern, 'i');
@@ -582,7 +584,7 @@ function main(config) {
     });
   }
 
-  // ④ LoadBalance
+  // ④ LoadBalance（仅收港 / 日 / 美 / 新 / 台节点）
   if (ruleOptionsEnable['LoadBalance'] !== false) {
     groups.push({
       name: 'LoadBalance',
@@ -591,6 +593,7 @@ function main(config) {
       strategy: 'consistent-hashing',
       interval: 300,
       url: 'http://1.1.1.1/generate_204',
+      filter: fiveRegionFilter,
       'exclude-filter': globalExclude,
       icon: `${iconBaseUrl}Round_Robin.svg`
     });
