@@ -64,8 +64,6 @@ https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Bettbox/BettboxScr
 - **其他**：极简模式、自动测速容差与间隔可调
 - **图标**：自托管 SVG 图标（另两个脚本未配置图标）
 
-**三个版本共有：** 五大地区组与自动测速组、`Other` 兜底组、AI / Google / YouTube / Spotify / Emby / TikTok / Telegram / Twitter / Instagram / Streaming / Final 分流组，以及 fake-ip DNS、hosts 映射、Reject 规则集、TUN。
-
 ---
 
 ## 配置文件
