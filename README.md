@@ -42,11 +42,18 @@ https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Bettbox/BettboxScr
 
 与前两个版本的差异：**40 余项功能均可在 Bettbox 界面直接开关**，无需修改代码。
 
-- **策略组**：地区手动 / 自动选择、高倍率 / 低倍率组、负载均衡，以及 AI、YouTube、Google、Telegram、Steam、Netflix、Spotify、Bilibili、Bahamut 等分流组
-- **节点处理**：自动补国旗、序号规整化、去除广告前后缀；按倍率过滤高 / 低倍率节点与非地区节点
-- **网络策略**：屏蔽国外 QUIC、指定域名阻断 IPv6、代理 IPv4 / IPv6 优先
-- **DNS**：防泄漏强化与 Fallback 容灾
-- **图标**：38 个自托管 SVG 图标
+**仅 Bettbox 版提供：**
+
+- **倍率分组**：生成高倍率 / 低倍率组，并按倍率过滤节点
+- **负载均衡组**：`LoadBalance` 策略组
+- **附加分流组**：Microsoft、Apple、GitHub、Steam、PikPak、Line、Meta、FCM、AdBlock、Speedtest、Bilibili、Bahamut
+- **节点整理**：自动补国旗、序号规整化、去除广告前后缀
+- **网络策略**：屏蔽国外 QUIC、指定域名阻断 IPv6、节点裂变 UDP、代理 IPv4 / IPv6 优先
+- **DNS**：防泄漏强化、Fallback 容灾
+- **其他**：极简模式、自动测速容差与间隔可调
+- **图标**：自托管 SVG 图标（另两个脚本未配置图标）
+
+**三个版本共有：** 五大地区组与自动测速组、`Other` 兜底组、AI / Google / YouTube / Spotify / Emby / TikTok / Telegram / Twitter / Instagram / Streaming / Final 分流组，以及 fake-ip DNS、hosts 映射、Reject 规则集、TUN。
 
 ---
 
