@@ -88,33 +88,47 @@ var ruleOptionsEnable = {
   PrimeVideo: true,
   HBO: true,
 
-  // 增强功能
-  自动补国旗: true,
-  去除节点广告前缀后缀: true,
-  节点序号规整化: true,
-  节点裂变UDP: false,
-  极简模式: false,
+  // ================= 其他设置 =================
+
+  // 分流模式
+  极简分流模式: false, // 开启后仅保留极简分流，减少策略组数量
+
+  // 策略组生成
   生成地区自动选择组: false,
   隐藏地区手动选择组: false,
   生成低倍率组: false,
   生成高倍率组: false,
-  分流组添加所有节点: false,
+
+  // 节点过滤
+  过滤非地区节点: true,
   过滤低倍率节点: false,
   过滤高倍率节点: false,
-  过滤非地区节点: true,
-  屏蔽国外QUIC: true,         // 精准拦截境外 QUIC，防止境外流媒体 UDP 断流
+  分流组添加所有节点: false,
+
+  // 节点整理
+  自动补国旗: true,
+  节点序号规整化: true,
+  去除节点广告前缀后缀: true,
+
+  // 网络策略
+  屏蔽国外QUIC: true, // 精准拦截境外 QUIC，防止境外流媒体 UDP 断流
   代理IPV4优先: true,
   代理IPV6优先: false,
-
-  DNS防泄漏强化: true,
-  DNSFallback容灾: true,
   特定域名阻断IPv6: true,
 
-  // 地区自动测试预设档位开关
+  // DNS
+  DNS防泄漏强化: true,
+  DNSFallback容灾: true,
+
+  // 节点裂变
+  节点裂变UDP: false,
+
+  // 自动测速间隔
   自动测试间隔_10分钟: false,
   自动测试间隔_30分钟: true,
   自动测试间隔_60分钟: false,
 
+  // 自动测速容差
   自动测试容差_10ms: false,
   自动测试容差_20ms: true,
   自动测试容差_50ms: false
@@ -236,7 +250,7 @@ function simplifyDomainPolicy(matchedProxyPolicy) {
 }
 
 function buildDnsAndHostsConfig(config, filteredProxies) {
-  const minimalModeEnabled = ruleOptionsEnable.极简模式;
+  const minimalModeEnabled = ruleOptionsEnable.极简分流模式;
   const originalDnsConfig = config.dns || {};
 
   const proxyServerNameservers = originalDnsConfig['proxy-server-nameserver'] || [];
@@ -519,7 +533,7 @@ function main(config) {
   if (ruleOptionsEnable['LoadBalance'] !== false) basicFunctionGroups.push('LoadBalance');
 
   const baseRegionList = [];
-  if (!ruleOptionsEnable.极简模式) {
+  if (!ruleOptionsEnable.极简分流模式) {
     baseRegionList.push('HK', 'SG', 'JP', 'US', 'TW', 'Other');
     if (ruleOptionsEnable.生成地区自动选择组) {
       baseRegionList.push('HKAuto', 'SGAuto', 'JPAuto', 'USAuto', 'TWAuto');
@@ -527,7 +541,7 @@ function main(config) {
   }
 
   const rateGroupsList = [];
-  if (!ruleOptionsEnable.极简模式) {
+  if (!ruleOptionsEnable.极简分流模式) {
     if (ruleOptionsEnable.生成低倍率组) rateGroupsList.push('LowGroup');
     if (ruleOptionsEnable.生成高倍率组) rateGroupsList.push('HighGroup');
   }
@@ -600,7 +614,7 @@ function main(config) {
   }
 
   // ⑤ 专属分流
-  if (ruleOptionsEnable.极简模式) {
+  if (ruleOptionsEnable.极简分流模式) {
     const finalCandidates = ['Manual', ...basicFunctionGroups, 'DIRECT'];
     groups.push({
       name: 'Final',
@@ -634,7 +648,7 @@ function main(config) {
   }
 
   // ⑥ 地区细分策略组
-  if (!ruleOptionsEnable.极简模式) {
+  if (!ruleOptionsEnable.极简分流模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
       { name: 'HK', filter: hkFilter, icon: `${iconBaseUrl}Hong_Kong.svg` },
@@ -774,11 +788,11 @@ function main(config) {
     rules.push('AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,geolocation-!cn)),REJECT');
   }
 
-  if (!ruleOptionsEnable.极简模式 && ruleOptionsEnable.AdBlock) {
+  if (!ruleOptionsEnable.极简分流模式 && ruleOptionsEnable.AdBlock) {
     rules.push('RULE-SET,category-ads,AdBlock');
   }
 
-  if (!ruleOptionsEnable.极简模式) {
+  if (!ruleOptionsEnable.极简分流模式) {
     if (ruleOptionsEnable.FCM) rules.push('RULE-SET,googlefcm,FCM');
     if (ruleOptionsEnable.Microsoft) {
       rules.push('RULE-SET,microsoft,Microsoft', 'RULE-SET,microsoft_ip,Microsoft');
@@ -822,7 +836,7 @@ function main(config) {
     if (ruleOptionsEnable.TikTok) rules.push('RULE-SET,TikTok,TikTok');
   }
 
-  const nanoTarget = ruleOptionsEnable.极简模式 ? 'Manual' : 'SG';
+  const nanoTarget = ruleOptionsEnable.极简分流模式 ? 'Manual' : 'SG';
 
   rules.push(
     `DOMAIN-SUFFIX,nano.cr18.eu.org,${nanoTarget}`,
