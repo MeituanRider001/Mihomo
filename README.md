@@ -61,16 +61,6 @@ https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Script/MihomoScrip
 https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Bettbox/BettboxScript.js
 ```
 
-### 脚本做了什么
-
-入口为 `main(config)`，接收客户端已解析的配置对象，按顺序执行：
-
-1. **节点清洗** —— 按关键词表剔除机场通知、广告、剩余流量等非节点条目
-2. **国旗补全** —— 检测节点名是否已含国旗 Emoji，缺失则按地区自动补上，已有则不重复添加
-3. **地区分组** —— 用带边界断言的正则匹配各地区，生成手动组与自动测速组
-4. **DNS 与 hosts 重建** —— 依据节点域名重建 `hosts` 映射与国内外 DNS 分流策略
-5. 返回处理后的配置对象
-
 ---
 
 ## 配置文件
