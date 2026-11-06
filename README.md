@@ -40,6 +40,14 @@ https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Script/MihomoScrip
 https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Bettbox/BettboxScript.js
 ```
 
+与前两个版本的差异：**40 余项功能均可在 Bettbox 界面直接开关**，无需修改代码。
+
+- **策略组**：地区手动 / 自动选择、高倍率 / 低倍率组、负载均衡，以及 AI、YouTube、Google、Telegram、Steam、Netflix、Spotify、Bilibili、Bahamut 等分流组
+- **节点处理**：自动补国旗、序号规整化、去除广告前后缀；按倍率过滤高 / 低倍率节点与非地区节点
+- **网络策略**：屏蔽国外 QUIC、指定域名阻断 IPv6、代理 IPv4 / IPv6 优先
+- **DNS**：防泄漏强化与 Fallback 容灾
+- **图标**：38 个自托管 SVG 图标
+
 ---
 
 ## 配置文件
