@@ -1,0 +1,140 @@
+# Mihomo
+
+基于 [mihomo](https://github.com/MetaCubeX/mihomo)（Clash.Meta）内核的**覆写脚本与配置文件**，在 [AIsouler/MyClash](https://github.com/AIsouler/MyClash) 基础上二次修改，仅适用于支持脚本覆写的 mihomo 客户端。
+
+> [!IMPORTANT]
+>
+> 使用本仓库的脚本或配置时，**请关闭代理软件自带的 DNS 覆写功能**，否则客户端的 DNS 设置会覆盖本项目的分流设计，导致节点域名解析异常或分流失效。
+
+## 特色功能
+
+- 🧩 **五大地区分组**：自动识别香港 / 新加坡 / 日本 / 美国 / 台湾节点，每区配「手动选点」与「自动测速」两组，另有 `Other` 兜底组收纳剩余节点
+- 🎯 **严格边界匹配**：地区正则使用前后边界断言（`(?<![A-Za-z])HK(?![A-Za-z])`），避免 `US` 误吞 `RUSSIA`、`HK` 误吞 `BKK` 一类跨国误判，同时兼容国旗 Emoji 与中英文节点名
+- 🧹 **节点自动清洗**：内置关键词表剔除机场广告、到期通知、剩余流量、官网地址等非节点条目，避免策略组被垃圾条目占满
+- 🌐 **双 DNS 体系**：国内直连 DNS 与海外 DoH 分离，`fake-ip` 增强模式，配合 `direct-nameserver-follow-policy` 保证国内域名走国内解析、不泄露
+- 🛡️ **广告与体验优化**：内置 `Reject` 规则集；屏蔽 B 站 PCDN 节点解决视频卡顿，主机映射 `services.googleapis.cn` 解决 Google Play 下载问题
+- 📺 **精细化分流**：AI / Google / YouTube / Spotify / Emby / TikTok / Telegram / Twitter / Instagram / Streaming / Final 各自独立策略组
+- 🪜 **代理链（Relay）**：支持「中转入口 + 落地出口」双订阅链式代理，出口节点通过 `dialer-proxy` 自动借道入口组
+- 📱 **Bettbox 适配**：提供图形化脚本，可在界面上开关策略组与功能选项，图标为 SVG 无损缩放
+
+## 版本选择
+
+脚本与配置各提供三个版本，核心功能一致，差别在策略组数量与代理链支持：
+
+| 版本 | 策略组 | 组成 | 适合人群 |
+|---|---|---|---|
+| 全量 | 23 | 5 地区手动组 + 5 自动测速组 + `Other` + 12 个功能组 | 日常主力 |
+| Lite | 17 | 5 地区手动组 + 12 个功能组（无 `Other`、无自动组） | 低配设备 / 极简偏好 |
+| Relay | 25 | 全量 + `Entry-Group` / `Exit-Group` | 中转 + 落地双订阅 |
+
+---
+
+## 覆写脚本（推荐）
+
+覆写脚本不改动机场订阅正文，客户端启动时动态注入策略组、清洗节点名称、补全国旗。机场换节点后无需手动调整配置，始终与节点列表保持同步。
+
+> [!NOTE]
+>
+> 脚本仅用于覆写**机场提供的订阅配置**，不要用于覆写本仓库的静态 YAML，二者会互相冲突。
+
+### 全量版
+
+[Script/MihomoScript.js](/Script/MihomoScript.js)，复制下方链接使用 👇
+
+```text
+https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Script/MihomoScript.js
+```
+
+### 精简版
+
+[Script/MihomoScriptLite.js](/Script/MihomoScriptLite.js)，复制下方链接使用 👇
+
+```text
+https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Script/MihomoScriptLite.js
+```
+
+### Bettbox 版
+
+[Bettbox/BettboxScript.js](/Bettbox/BettboxScript.js)，策略组可在图形界面开关，图标采用 SVG 👇
+
+```text
+https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Bettbox/BettboxScript.js
+```
+
+### 脚本做了什么
+
+入口为 `main(config)`，接收客户端已解析的配置对象，按顺序执行：
+
+1. **节点清洗** —— 按关键词表剔除机场通知、广告、剩余流量等非节点条目
+2. **国旗补全** —— 检测节点名是否已含国旗 Emoji，缺失则按地区自动补上，已有则不重复添加
+3. **地区分组** —— 用带边界断言的正则匹配各地区，生成手动组与自动测速组
+4. **DNS 与 hosts 重建** —— 依据节点域名重建 `hosts` 映射与国内外 DNS 分流策略
+5. 返回处理后的配置对象
+
+---
+
+## 配置文件
+
+静态 YAML 的优势是不依赖客户端脚本支持，任何 mihomo 内核客户端都能直接导入；代价是**无法像脚本那样动态处理**，因此存在三点固有限制：
+
+- 无法根据实际节点动态生成地区组，某个地区没有匹配到节点时，该策略组为空
+- 使用机场私有 DNS 或 hosts 映射节点域名的场景，需要手动写入 `hosts` 段
+- 端口、地区正则、订阅链接等自定义项均需手工编辑
+
+### 全量版
+
+[Config/MihomoConfig.yaml](/Config/MihomoConfig.yaml) 👇
+
+```text
+https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Config/MihomoConfig.yaml
+```
+
+### 精简版
+
+[Config/MihomoConfigLite.yaml](/Config/MihomoConfigLite.yaml) 👇
+
+```text
+https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Config/MihomoConfigLite.yaml
+```
+
+### 代理链版
+
+[Config/MihomoConfigRelay.yaml](/Config/MihomoConfigRelay.yaml) 👇
+
+```text
+https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Config/MihomoConfigRelay.yaml
+```
+
+适用于「中转入口 + 落地出口」双订阅。两条订阅分别填写：
+
+```yaml
+proxy-providers:
+  Subscribe-In:                      # 第一跳：中转入口
+    url: http://your-entry-provider
+    <<: *p
+  Subscribe-Out:                     # 第二跳：最终落地
+    url: http://your-exit-provider
+    <<: *p
+    override:
+      dialer-proxy: Entry-Group      # 关键：出口节点自动借道入口组
+```
+
+`Entry-Group` 绑定 `Subscribe-In` 选择中转节点，`Exit-Group` 绑定 `Subscribe-Out` 选择落地节点，流量路径为 `本机 → Entry-Group → Exit-Group → 目标站点`。
+
+---
+
+## 致谢
+
+本项目在以下开源工作的基础上修改与整合：
+
+- [AIsouler/MyClash](https://github.com/AIsouler/MyClash) —— 本项目的基础来源，脚本与配置结构均源自该项目
+- [Repcz/Tool](https://github.com/Repcz/Tool) —— 主要规则集来源
+- [blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script) —— 补充规则与图标
+- [appshubcc/bett-rules](https://github.com/appshubcc/bett-rules) —— Bettbox 规则
+- [Koolson/Qure](https://github.com/Koolson/Qure) —— 策略组图标
+- [Zephyruso/zashboard](https://github.com/Zephyruso/zashboard) —— 在线面板
+- [jsdmirror/JSDMirror](https://github.com/jsdmirror/JSDMirror) —— CDN 加速
+
+## 免责声明
+
+本项目仅供网络技术学习与交流使用。配置文件与脚本本身不包含任何代理节点，不提供任何网络服务。使用者应自行确保使用方法符合所在地法律法规，因使用本项目产生的一切后果由使用者自行承担。
