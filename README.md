@@ -68,7 +68,7 @@ https://raw.githubusercontent.com/MeituanRider001/Mihomo/main/Bettbox/BettboxScr
 
 ## 配置文件
 
-静态 YAML 的优势是不依赖客户端脚本支持，任何 mihomo 内核客户端都能直接导入；代价是**无法像脚本那样动态处理**，因此存在三点固有限制：
+静态 YAML 的优势是不依赖客户端脚本支持，任何 mihomo 内核客户端都能直接导入，代价是**无法像脚本那样动态处理**，因此存在三点固有限制：
 
 - 无法根据实际节点动态生成地区组，某个地区没有匹配到节点时，该策略组为空
 - 使用机场私有 DNS 或 hosts 映射节点域名的场景，需要手动写入 `hosts` 段
