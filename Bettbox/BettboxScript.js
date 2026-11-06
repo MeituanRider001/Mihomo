@@ -4,7 +4,7 @@
 
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
-const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/svg/';
+const iconBaseUrl = 'https://fastly.jsdelivr.net/gh/MeituanRider001/Mihomo@main/Icons-svg/';
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
 /**
@@ -15,20 +15,20 @@ const serviceConfigs = [
   { name: 'Manual', icon: `${iconBaseUrl}Proxy.svg`, isBase: true },
   { name: 'SelectGroup', icon: `${iconBaseUrl}Static.svg`, isBase: true },
   { name: 'AutoGroup', icon: `${iconBaseUrl}Auto.svg`, isBase: true },
-  { name: 'LoadBalance', icon: `${iconBaseUrl}RoundRobin.svg`, isBase: true },
+  { name: 'LoadBalance', icon: `${iconBaseUrl}Round_Robin.svg`, isBase: true },
 
   // 专属服务策略组
   { name: 'AdBlock', icon: `${iconBaseUrl}AdBlock.svg`, reject: true },
   { name: 'FCM', icon: `${iconBaseUrl}Fcm.svg`, direct: true },
   { name: 'Microsoft', icon: `${iconBaseUrl}Microsoft.svg`, direct: true },
   { name: 'Apple', icon: `${iconBaseUrl}Apple.svg`, direct: true },
-  { name: 'GitHub', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/GitHub.png', direct: true },
+  { name: 'GitHub', icon: `${iconBaseUrl}GitHub.svg`, direct: true },
   { name: 'Steam', icon: `${iconBaseUrl}Steam.svg`, direct: true },
   { name: 'PikPak', icon: `${iconBaseUrl}PikPak.svg`, direct: true },
   { name: 'Meta', icon: `${iconBaseUrl}Meta.svg` },
   { name: 'Line', icon: `${iconBaseUrl}Line.svg` },
-  { name: 'Speedtest', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Speedtest.png', direct: true },
-  { name: 'AI', icon: `${iconBaseUrl}OpenAI.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] },
+  { name: 'Speedtest', icon: `${iconBaseUrl}Speedtest.svg`, direct: true },
+  { name: 'AI', icon: `${iconBaseUrl}ChatGPT.svg`, proxies: ['Manual', 'US', 'JP', 'SG', 'TW', 'HK', 'Other'] },
   { name: 'Telegram', icon: `${iconBaseUrl}Telegram.svg` },
   { name: 'Google', icon: `${iconBaseUrl}Google.svg` },
   { name: 'YouTube', icon: `${iconBaseUrl}YouTube.svg` },
@@ -36,17 +36,17 @@ const serviceConfigs = [
   { name: 'Emby', icon: `${iconBaseUrl}Emby.svg` },
   { name: 'TikTok', icon: `${iconBaseUrl}TikTok.svg` },
   { name: 'Twitter', icon: `${iconBaseUrl}Twitter.svg` },
-  { name: 'Instagram', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Instagram.png' },
+  { name: 'Instagram', icon: `${iconBaseUrl}Instagram.svg` },
 
   // 细分流媒体组
-  { name: 'Bilibili', icon: 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/icon/qure/color/bilibili.png', proxies: ['DIRECT', 'HK', 'TW'] },
-  { name: 'Bahamut', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png', proxies: ['TW', 'HK', 'Manual'] },
-  { name: 'Netflix', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Netflix.png' },
-  { name: 'Disney', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Disney.png' },
-  { name: 'PrimeVideo', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Prime_Video.png' },
-  { name: 'HBO', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/HBO.png' },
+  { name: 'Bilibili', icon: `${iconBaseUrl}bilibili.svg`, proxies: ['DIRECT', 'HK', 'TW'] },
+  { name: 'Bahamut', icon: `${iconBaseUrl}Bahamut.svg`, proxies: ['TW', 'HK', 'Manual'] },
+  { name: 'Netflix', icon: `${iconBaseUrl}Netflix.svg` },
+  { name: 'Disney', icon: `${iconBaseUrl}Disney.svg` },
+  { name: 'PrimeVideo', icon: `${iconBaseUrl}Prime_Video.svg` },
+  { name: 'HBO', icon: `${iconBaseUrl}HBO.svg` },
 
-  { name: 'Final', icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Final.png' }
+  { name: 'Final', icon: `${iconBaseUrl}Final.svg` }
 ];
 
 /**
@@ -592,7 +592,7 @@ function main(config) {
       interval: 300,
       url: 'http://1.1.1.1/generate_204',
       'exclude-filter': globalExclude,
-      icon: `${iconBaseUrl}RoundRobin.svg`
+      icon: `${iconBaseUrl}Round_Robin.svg`
     });
   }
 
@@ -603,7 +603,7 @@ function main(config) {
       name: 'Final',
       type: 'select',
       proxies: [...new Set(finalCandidates)],
-      icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Final.png'
+      icon: `${iconBaseUrl}Final.svg`
     });
   } else {
     serviceConfigs.filter(svc => !svc.isBase).forEach(svc => {
@@ -634,12 +634,12 @@ function main(config) {
   if (!ruleOptionsEnable.极简模式) {
     const hideManual = ruleOptionsEnable.隐藏地区手动选择组 === true;
     const regionSelectConfigs = [
-      { name: 'HK', filter: hkFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Hong_Kong.png' },
-      { name: 'SG', filter: sgFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Singapore.png' },
-      { name: 'JP', filter: jpFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Japan.png' },
-      { name: 'US', filter: usFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/United_States.png' },
-      { name: 'TW', filter: twFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/China.png' },
-      { name: 'Other', 'exclude-filter': otherExclude, icon: 'https://cdn.jsdmirror.com/gh/lige47/QuanX-icon-rule@main/icon/05icon/quanqiu(1).png' }
+      { name: 'HK', filter: hkFilter, icon: `${iconBaseUrl}Hong_Kong.svg` },
+      { name: 'SG', filter: sgFilter, icon: `${iconBaseUrl}Singapore.svg` },
+      { name: 'JP', filter: jpFilter, icon: `${iconBaseUrl}Japan.svg` },
+      { name: 'US', filter: usFilter, icon: `${iconBaseUrl}United_States.svg` },
+      { name: 'TW', filter: twFilter, icon: `${iconBaseUrl}Taiwan.svg` },
+      { name: 'Other', 'exclude-filter': otherExclude, icon: `${iconBaseUrl}Global.svg` }
     ];
 
     regionSelectConfigs.forEach(r => {
@@ -664,11 +664,11 @@ function main(config) {
       if (ruleOptionsEnable.自动测试容差_50ms) dynamicTolerance = 50;
 
       const regionAutoConfigs = [
-        { name: 'HKAuto', filter: hkFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Hong_Kong.png' },
-        { name: 'SGAuto', filter: sgFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Singapore.png' },
-        { name: 'JPAuto', filter: jpFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/Japan.png' },
-        { name: 'USAuto', filter: usFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/United_States.png' },
-        { name: 'TWAuto', filter: twFilter, icon: 'https://cdn.jsdmirror.com/gh/Koolson/Qure@master/IconSet/Color/China.png' }
+        { name: 'HKAuto', filter: hkFilter, icon: `${iconBaseUrl}Hong_Kong.svg` },
+        { name: 'SGAuto', filter: sgFilter, icon: `${iconBaseUrl}Singapore.svg` },
+        { name: 'JPAuto', filter: jpFilter, icon: `${iconBaseUrl}Japan.svg` },
+        { name: 'USAuto', filter: usFilter, icon: `${iconBaseUrl}United_States.svg` },
+        { name: 'TWAuto', filter: twFilter, icon: `${iconBaseUrl}Taiwan.svg` }
       ];
 
       regionAutoConfigs.forEach(r => {
@@ -759,6 +759,8 @@ function main(config) {
 
   // 8. 规则执行链构建（自上而下匹配执行）
   const rules = [
+    // 图标 CDN 直连，避免图标请求经代理造成循环依赖
+    'DOMAIN,fastly.jsdelivr.net,DIRECT',
     'RULE-SET,Lan,DIRECT',
     'RULE-SET,Direct,DIRECT',
     'RULE-SET,Reject,REJECT'
