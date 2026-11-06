@@ -2,7 +2,11 @@
 
 基于 [mihomo](https://github.com/MetaCubeX/mihomo)（Clash.Meta）内核的**覆写脚本与配置文件**，在 [AIsouler/MyClash](https://github.com/AIsouler/MyClash) 基础上二次修改，仅适用于支持脚本覆写的 mihomo 客户端。
 
-> 本项目为**个人自用**配置，按自身使用习惯调整，非通用方案，不保证适配所有机场与客户端。
+> [!WARNING]
+>
+> **本项目为个人自用配置**
+>
+> 按自身机场与使用习惯调整，**非通用方案**，不保证适配所有机场与客户端，也不接受适配类问题反馈。
 
 > [!IMPORTANT]
 >
