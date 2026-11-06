@@ -4,7 +4,7 @@
 
 const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
-const iconBaseUrl = 'https://fastly.jsdelivr.net/gh/MeituanRider001/Mihomo@main/Icons-svg/';
+const iconBaseUrl = 'https://fastly.jsdelivr.net/gh/MeituanRider001/Mihomo@main/Icons/svg/';
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
 /**
