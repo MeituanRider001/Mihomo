@@ -1337,6 +1337,7 @@ function main(config) {
     private: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/private.mrs`, path: './ruleset/private.mrs' },
     fakeip_filter: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/fakeip-filter.mrs`, path: './ruleset/fakeip_filter.mrs' },
     cn: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/cn.mrs`, path: './ruleset/cn.mrs' },
+    douyin: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/douyin.mrs`, path: './ruleset/douyin.mrs' },
     microsoft: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/microsoft.mrs`, path: './ruleset/microsoft.mrs' },
     microsoft_ip: { ...ipMrs, url: `${ruleSetBaseUrl}geoip/microsoft.mrs`, path: './ruleset/microsoft_ip.mrs' },
     apple: { ...domainMrs, url: `${ruleSetBaseUrl}geosite/apple.mrs`, path: './ruleset/apple.mrs' },
